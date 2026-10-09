@@ -1,0 +1,90 @@
+﻿@model IEnumerable<WebAssignment.Models.Review>
+
+@{
+    ViewData["Title"] = "Manage Reviews";
+}
+
+@{
+    // C# Helper function to generate star HTML based on the rating number
+    string GetStarRating(int rating)
+    {
+        if (rating < 0) rating = 0;
+        if (rating > 5) rating = 5;
+
+        // Use a simple string builder approach to create the stars HTML
+        string stars = "";
+        for (int i = 0; i < rating; i++)
+        {
+            // Filled star
+            stars += "<i class=\"bi bi-star-fill small me-1\"></i>";
+        }
+        for (int i = rating; i < 5; i++)
+        {
+            // Empty star (optional, for visual completeness)
+            stars += "<i class=\"bi bi-star me-1\"></i>";
+        }
+        return stars;
+    }
+}
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">User Reviews Management</h2>
+        <span class="badge bg-warning text-dark fs-6">Total: @Model.Count()</span>
+    </div>
+
+    <div class="card bg-dark border-secondary">
+        <div class="card-body p-0">
+            <table class="table table-dark table-hover mb-0">
+                <thead class="bg-secondary">
+                    <tr>
+                        <th style="width: 15%">Movie</th>
+                        <th style="width: 15%">User</th>
+                        <th style="width: 15%">Rating</th>
+                        <th style="width: 25%">Comment</th>
+                        <th style="width: 30%">Admin Reply</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="align-middle fw-bold text-warning">@item.Movie?.Title</td>
+                            <td class="align-middle">
+                                @item.User?.Username <br />
+                                <small class="text-muted">@item.CreatedAt.ToString("dd/MM/yy HH:mm")</small>
+                            </td>
+                            <td class="align-middle">
+                                <span class="text-warning d-flex align-items-center">
+                                    <span class="fw-bold me-1">@item.Rating</span>
+                                    @Html.Raw(GetStarRating(item.Rating))
+                                </span>
+                            </td>
+                            <td class="align-middle">
+                                <p class="mb-0 text-white-50">@item.Comment</p>
+                            </td>
+                            <td class="align-middle">
+                                @if (string.IsNullOrEmpty(item.Reply))
+                                {
+                                    <form asp-action="AddReply" method="post" class="d-flex gap-2">
+                                        <input type="hidden" name="reviewId" value="@item.ReviewId" />
+                                        <input type="text" name="replyText" class="form-control form-control-sm bg-black text-white border-secondary" placeholder="Type reply..." required />
+                                        <button type="submit" class="btn btn-sm btn-primary">Reply</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <div class="p-2 rounded border border-secondary" style="background: #1a1a1a;">
+                                        <small class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Replied:</small>
+                                        <p class="mb-0 small text-white">@item.Reply</p>
+                                        <small class="text-muted" style="font-size: 0.7rem;">@item.ReplyDate?.ToString("dd MMM HH:mm")</small>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

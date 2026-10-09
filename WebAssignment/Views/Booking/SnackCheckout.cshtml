@@ -1,0 +1,446 @@
+﻿@using System.Globalization
+@inject WebAssignment.Helpers.LanguageService Lang
+@model dynamic
+
+@{
+    ViewData["Title"] = Lang.Get("Checkout");
+
+    // 1. DATA RETRIEVAL
+    var showtime = ViewBag.Showtime as WebAssignment.Models.Showtime;
+    var selectedSeatIds = ViewBag.SelectedSeatIds as List<int>;
+    var selectedSeats = ViewBag.SelectedSeats as List<WebAssignment.Models.Seat>;
+    var snacks = ViewBag.Snacks as Dictionary<int, int>;
+    var customizations = ViewBag.Customizations as Dictionary<int, string> ?? new Dictionary<int, string>();
+    var snackList = ViewBag.SnackObjects as List<WebAssignment.Models.Snack> ?? new List<WebAssignment.Models.Snack>();
+    var suggestedPromos = ViewBag.SuggestedPromos as List<dynamic>;
+
+    // 2. RECALCULATE TOTALS
+    decimal realSnackTotal = 0;
+    if (snacks != null && snackList.Any())
+    {
+        foreach (var item in snacks)
+        {
+            if (item.Value > 0)
+            {
+                var s = snackList.FirstOrDefault(x => x.SnackId == item.Key);
+                if (s != null)
+                {
+                    decimal price = s.Price;
+                    if (customizations.ContainsKey(item.Key))
+                    {
+                        string c = customizations[item.Key];
+                        if (c.Contains("Large")) price += 2.00m;
+                        if (c.Contains("Extra Butter")) price += 1.00m;
+                        if (c.Contains("Royale")) price += 3.00m;
+                    }
+                    realSnackTotal += price * item.Value;
+                }
+            }
+        }
+    }
+
+    decimal ticketTotal = 0;
+    if (showtime != null && selectedSeatIds != null)
+    {
+        decimal price = showtime.TicketPrice;
+        if (new[] { DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday }.Contains(showtime.StartTime.DayOfWeek))
+        {
+            price += 3.00m;
+        }
+        ticketTotal = price * selectedSeatIds.Count;
+    }
+
+    decimal subTotal = ticketTotal + realSnackTotal;
+    decimal processingFee = (ViewBag.ProcessingFee as decimal?) ?? 0;
+    decimal grandTotal = subTotal + processingFee;
+}
+
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-md-7">
+            <a href="javascript:history.back()" class="text-white-50 text-decoration-none d-inline-flex align-items-center mb-3 hover-gold">
+                <i class="bi bi-arrow-left me-2"></i> @Lang.Get("Back to Menu")
+            </a>
+            <h3 class="gold-title mb-4">@Lang.Get("Checkout & Payment")</h3>
+
+            <form asp-action="ConfirmBooking" method="post" id="paymentForm" novalidate>
+                <input type="hidden" name="showtimeId" value="@(showtime?.ShowtimeId ?? 0)" />
+                <input type="hidden" name="promoCodeInput" id="appliedPromoCode" />
+
+                @if (selectedSeatIds != null)
+                {
+                    foreach (var id in selectedSeatIds)
+                    {
+                        <input type="hidden" name="selectedSeatIds" value="@id" />
+                    }
+                }
+                @if (snacks != null)
+                {
+                    foreach (var item in snacks)
+                    {
+                        <input type="hidden" name="snacks[@item.Key]" value="@item.Value" />
+                    }
+                }
+                @foreach (var c in customizations)
+                {
+                    <input type="hidden" name="customizations[@c.Key]" value="@c.Value" />
+                }
+
+                <div class="card p-4 mb-3 shadow-sm" style="background-color: #121212; border: 1px solid var(--gold-dark);">
+                    <h5 class="gold-title mb-3"><i class="bi bi-tag-fill me-2"></i>@Lang.Get("Promo Code")</h5>
+
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <div class="input-group mb-3">
+                            <input type="text" id="promoInput" class="form-control bg-dark text-white border-secondary" placeholder="@Lang.Get("Enter Code") (e.g. WALIU10)">
+                            <button class="btn btn-outline-warning" type="button" onclick="applyPromo()">@Lang.Get("Apply")</button>
+                        </div>
+                        <div id="promoMessage" class="small fw-bold mb-3"></div>
+                    }
+                    else
+                    {
+                        <div class="p-3 mb-4 rounded d-flex align-items-center" style="background-color: #1a1a1a; border: 1px solid var(--gold-dark);">
+                            <i class="bi bi-info-circle-fill me-3" style="color: var(--gold-main); font-size: 1.2rem;"></i>
+                            <span style="color: var(--text-white);">
+                                <a asp-controller="Account" asp-action="Login" class="fw-bold text-decoration-underline" style="color: var(--gold-main);">@Lang.Get("Login")</a>
+                                @Lang.Get("to use Promo Codes and earn Points!")
+                            </span>
+                        </div>
+                    }
+
+                    <hr class="border-secondary mb-4">
+                    <h5 class="gold-title mb-3"><i class="bi bi-credit-card-2-front-fill me-2"></i>@Lang.Get("Payment Method")</h5>
+
+                    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active fw-bold" id="pills-card-tab" data-bs-toggle="pill"
+                                    data-bs-target="#pills-card" type="button" role="tab" onclick="setPayment('Credit Card')">
+                                <i class="bi bi-credit-card me-2"></i>@Lang.Get("Card")
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link fw-bold" id="pills-ewallet-tab" data-bs-toggle="pill"
+                                    data-bs-target="#pills-ewallet" type="button" role="tab" onclick="setPayment('TNG eWallet')">
+                                <i class="bi bi-qr-code-scan me-2"></i>@Lang.Get("TNG / Grab")
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link fw-bold" id="pills-fpx-tab" data-bs-toggle="pill"
+                                    data-bs-target="#pills-fpx" type="button" role="tab" onclick="setPayment('FPX Banking')">
+                                <i class="bi bi-bank me-2"></i>@Lang.Get("Online Banking")
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="pills-tabContent">
+                        <div class="tab-pane fade show active" id="pills-card" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="text-muted small">@Lang.Get("Cardholder Name")</label>
+                                <input type="text" id="cc-name" class="form-control bg-dark text-white border-secondary" required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">@Lang.Get("Card Number")</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-dark border-secondary text-white"><i class="bi bi-credit-card"></i></span>
+                                    <input type="text" id="cc-number" class="form-control bg-dark text-white border-secondary"
+                                           placeholder="1234 5678 1234 5678" maxlength="19" required
+                                           autocomplete="off" inputmode="numeric" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">@Lang.Get("Expiry")</label>
+                                    <input type="text" id="cc-expiry" class="form-control bg-dark text-white border-secondary"
+                                           placeholder="MM/YY" maxlength="5" required
+                                           autocomplete="off" inputmode="numeric" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted small">CVV</label>
+                                    <input type="text" id="cc-cvv" class="form-control bg-dark text-white border-secondary"
+                                           placeholder="123" maxlength="3" required
+                                           autocomplete="off" inputmode="numeric" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade text-center" id="pills-ewallet" role="tabpanel">
+                            <div class="p-4 rounded border border-secondary bg-dark">
+                                <h6 class="text-warning mb-3">@Lang.Get("Sample Payment (Read-Only)")</h6>
+                                <div class="mb-3 text-start">
+                                    <label class="text-muted small">Sample Wallet ID</label>
+
+                                    <div class="form-control bg-dark text-white border-warning"
+                                         style="cursor: not-allowed; opacity: 1;">
+                                        WAL-8829-1102
+                                    </div>
+
+                                </div>
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png"
+                                     alt="QR Code" class="bg-white p-2 rounded" style="width: 150px; height: 150px;">
+                                <p class="text-muted mt-3 small">
+                                    @Lang.Get("Open your e-wallet app and scan this code to pay.") <br>
+                                    @Lang.Get("Payment will be verified automatically.")
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="pills-fpx" role="tabpanel">
+                            <div class="mb-4">
+                                <label class="text-muted mb-3">@Lang.Get("Select Bank")</label>
+                                <div class="bank-list">
+                                    <label class="bank-option">
+                                        <input type="radio" name="SelectedBank" value="Maybank2u" checked>
+                                        <div class="bank-card">
+                                            <img src="/images/maybank-seeklogo.png" alt="Maybank">
+                                            <span>Maybank2u</span>
+                                        </div>
+                                    </label>
+                                    <label class="bank-option">
+                                        <input type="radio" name="SelectedBank" value="CIMB Clicks">
+                                        <div class="bank-card">
+                                            <img src="/images/CIMB Icon Logo Vector.svg .png" alt="CIMB">
+                                            <span>CIMB Clicks</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="PaymentMethod" id="selectedPaymentMethod" value="Credit Card">
+                    <button type="submit" class="btn btn-primary w-100 py-3 mt-3 shadow-lg fw-bold text-dark" id="btnConfirmPay">
+                        @Lang.Get("PAY") <span id="btnTotalText">RM @grandTotal.ToString("N2")</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card p-4 sticky-top shadow-lg" style="top: 20px; background-color: #121212; border: 1px solid var(--gold-dark);">
+                <h4 class="gold-title mb-3">@Lang.Get("Order Summary")</h4>
+
+                @if (showtime != null)
+                {
+                    <div class="d-flex mb-3">
+                        <img src="@showtime.Movie.ImageUrl" class="rounded shadow-sm" style="width: 80px; height: 120px; object-fit: cover; border: 1px solid #333;">
+                        <div class="ms-3">
+                            <h5 class="text-white mb-1 fw-bold">@showtime.Movie.Title</h5>
+                            <p class="small text-muted mb-1">@showtime.Hall.Cinema.Name</p>
+                            <p class="small text-white">@showtime.StartTime.ToString("ddd, h:mm tt")</p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-dark border-secondary text-center">
+                        <i class="bi bi-basket text-warning fs-3"></i><br />
+                        <span class="text-white fw-bold">@Lang.Get("Snack Purchase Only")</span>
+                    </div>
+                }
+
+                <hr style="border-color: #333;" />
+
+                @if (selectedSeatIds != null && selectedSeatIds.Any())
+                {
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-white">@Lang.Get("Movie Tickets") (x @selectedSeatIds.Count)</span>
+                        <span class="text-white">RM @ticketTotal.ToString("N2")</span>
+                    </div>
+                    @if (selectedSeats != null && selectedSeats.Any())
+                    {
+                        <div class="text-end mb-3 p-2 rounded" style="background: #222; border-left: 3px solid var(--gold-main);">
+                            <small class="text-muted d-block">@Lang.Get("Seats Selected"):</small>
+                            <span class="text-warning fw-bold" style="font-size: 1.1rem; letter-spacing: 1px;">
+                                @string.Join(", ", selectedSeats.Select(s => s.Row + s.Number))
+                            </span>
+                        </div>
+                    }
+                }
+
+                @if (snacks != null && snacks.Values.Sum() > 0)
+                {
+                    <div class="text-warning mb-2 small fw-bold" style="border-bottom: 1px dashed #444; margin-top: 10px;">@Lang.Get("Snacks")</div>
+                    @foreach (var item in snacks)
+                    {
+                        if (item.Value > 0)
+                        {
+                            var snackObj = snackList.FirstOrDefault(s => s.SnackId == item.Key);
+                            if (snackObj != null)
+                            {
+                                string custDetail = customizations.ContainsKey(item.Key) ? customizations[item.Key] : "Regular";
+                                if (custDetail.StartsWith(", ")) custDetail = custDetail.Substring(2);
+
+                                decimal itemPrice = snackObj.Price;
+                                if (custDetail.Contains("Large")) itemPrice += 2.00m;
+                                if (custDetail.Contains("Extra Butter")) itemPrice += 1.00m;
+                                if (custDetail.Contains("Royale")) itemPrice += 3.00m;
+
+                                <div class="d-flex justify-content-between text-muted mb-2 align-items-start">
+                                    <div class="d-flex flex-column">
+                                        <span class="text-white fw-bold">@snackObj.Name</span>
+                                        <span class="text-warning small fst-italic">
+                                            (@Lang.Get(custDetail)) <span class="text-muted ms-1">x @item.Value</span>
+                                        </span>
+                                    </div>
+                                    <span class="text-white">RM @((itemPrice * item.Value).ToString("N2"))</span>
+                                </div>
+                            }
+                        }
+                    }
+                }
+
+                <hr style="border-color: #333;" />
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-white">@Lang.Get("Subtotal")</span><span>RM @subTotal.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-white">@Lang.Get("Processing Fee")</span><span>RM @processingFee.ToString("N2")</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2 text-success" id="discountRow" style="display:none;">
+                    <span>@Lang.Get("Discount")</span><span id="discountValue">- RM 0.00</span>
+                </div>
+
+                <div class="d-flex justify-content-between mt-3 pt-3 border-top border-secondary">
+                    <h4 class="gold-title">@Lang.Get("TOTAL")</h4>
+                    <h4 class="gold-title" id="grandTotalDisplay">RM @grandTotal.ToString("N2")</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let originalGrandTotal = parseFloat("@(grandTotal.ToString("0.00", CultureInfo.InvariantCulture))");
+    let realSnackTotal = parseFloat("@(realSnackTotal.ToString("0.00", CultureInfo.InvariantCulture))");
+    let realTicketTotal = parseFloat("@(ticketTotal.ToString("0.00", CultureInfo.InvariantCulture))");
+
+    document.addEventListener("DOMContentLoaded", function () {
+        console.log("Payment Script Loaded Successfully"); // CHECK YOUR CONSOLE FOR THIS
+
+        const cardInput = document.getElementById('cc-number');
+        const expiryInput = document.getElementById('cc-expiry');
+        const cvvInput = document.getElementById('cc-cvv');
+        const paymentForm = document.getElementById('paymentForm');
+
+        // Force clear fields on load
+        cardInput.value = "";
+        expiryInput.value = "";
+        cvvInput.value = "";
+
+        // 1. Auto-format Card Number
+        cardInput.addEventListener('input', function (e) {
+            let val = e.target.value.replace(/\D/g, '');
+            let formatted = val.match(/.{1,4}/g)?.join(' ') || '';
+            e.target.value = formatted;
+        });
+
+        // 2. Auto-format Expiry
+        expiryInput.addEventListener('input', function (e) {
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length >= 2) {
+                e.target.value = val.substring(0, 2) + '/' + val.substring(2, 4);
+            } else {
+                e.target.value = val;
+            }
+        });
+
+        // 3. Block non-numbers for CVV
+        cvvInput.addEventListener('input', function (e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        // 4. MAIN VALIDATION FUNCTION
+        paymentForm.addEventListener('submit', function (e) {
+            const method = document.getElementById("selectedPaymentMethod").value;
+
+            // Only validate if 'Credit Card' is the selected method
+            if (method === 'Credit Card') {
+                const cardClean = cardInput.value.replace(/\s/g, '');
+                const expiryVal = expiryInput.value;
+                const cvvVal = cvvInput.value;
+                const nameVal = document.getElementById('cc-name').value.trim();
+
+                let errors = [];
+                if (nameVal.length < 2) errors.push("- Cardholder Name is required.");
+                if (cardClean.length !== 16) errors.push("- Card Number must be 16 digits.");
+                if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryVal)) errors.push("- Expiry must be MM/YY.");
+                if (cvvVal.length !== 3) errors.push("- CVV must be 3 digits.");
+
+                if (errors.length > 0) {
+                    // This prevents the form from sending if there are errors
+                    e.preventDefault();
+                    e.stopPropagation();
+                    alert("Please fix the card details:\n" + errors.join("\n"));
+                }
+            }
+        });
+    });
+
+    function setPayment(method) {
+        document.getElementById("selectedPaymentMethod").value = method;
+        const ccFields = ['cc-name', 'cc-number', 'cc-expiry', 'cc-cvv'];
+        ccFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (method === 'Credit Card') {
+                el.setAttribute("required", "required");
+            } else {
+                el.removeAttribute("required");
+                el.value = "";
+            }
+        });
+    }
+
+    async function applyPromo() {
+        var code = document.getElementById("promoInput").value;
+        var messageBox = document.getElementById("promoMessage");
+        if(!code) {
+            messageBox.innerHTML = "@Lang.Get("Please enter a code.")";
+            messageBox.className = "small fw-bold mb-3 text-danger";
+            return;
+        }
+
+        const formData = new URLSearchParams();
+        formData.append('code', code);
+        formData.append('ticketTotal', realTicketTotal);
+        formData.append('snackTotal', realSnackTotal);
+
+        formData.append(
+            '__RequestVerificationToken',
+            document.querySelector(
+                '#paymentForm input[name="__RequestVerificationToken"]'
+            ).value
+        );
+
+        try {
+            const response = await fetch('/Booking/ValidatePromo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            });
+            const data = await response.json();
+
+            if(data.success) {
+                messageBox.innerHTML = data.message;
+                messageBox.className = "small fw-bold mb-3 text-success";
+                var discount = parseFloat(data.discount);
+                var newTotal = originalGrandTotal - discount;
+                if(newTotal < 0) newTotal = 0;
+                document.getElementById("discountRow").style.display = "flex";
+                document.getElementById("discountValue").innerText = "- RM " + discount.toFixed(2);
+                document.getElementById("grandTotalDisplay").innerText = "RM " + newTotal.toFixed(2);
+                document.getElementById("btnTotalText").innerText = "RM " + newTotal.toFixed(2);
+                document.getElementById("appliedPromoCode").value = code;
+                document.getElementById("promoInput").disabled = true;
+            } else {
+                messageBox.innerHTML = data.message;
+                messageBox.className = "small fw-bold mb-3 text-danger";
+            }
+        } catch (error) {
+            messageBox.innerHTML = "@Lang.Get("Server error. Try again.")";
+            messageBox.className = "small fw-bold mb-3 text-danger";
+        }
+    }
+</script>

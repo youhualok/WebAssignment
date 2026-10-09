@@ -1,0 +1,24 @@
+﻿@model WebAssignment.Models.User
+
+@{
+    ViewData["Title"] = "Delete User";
+}
+
+<div class="container mt-5" style="max-width: 500px;">
+    <div class="card p-4 shadow-lg border-danger" style="background-color: #121212;">
+        <div class="text-center mb-4">
+            <i class="bi bi-exclamation-triangle-fill text-danger display-1"></i>
+            <h3 class="text-white mt-3">Delete User?</h3>
+            <p class="text-muted">Are you sure you want to delete <strong>@Model.Username</strong>?</p>
+            <p class="text-danger small fw-bold">This action cannot be undone.</p>
+        </div>
+
+        <form asp-action="Delete">
+            <input type="hidden" asp-for="UserId" />
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-danger fw-bold">Yes, Delete User</button>
+                <a asp-action="Index" class="btn btn-outline-light">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

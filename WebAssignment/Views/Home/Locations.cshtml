@@ -1,0 +1,130 @@
+﻿@model IEnumerable<WebAssignment.Models.Cinema>
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("Our Locations");
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    body {
+        background-color: #000;
+        color: white;
+    }
+
+    #map {
+        height: 500px;
+        width: 100%;
+        border-radius: 15px;
+        border: 2px solid #d4af37;
+        z-index: 1;
+    }
+
+    .cinema-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+        .cinema-card:hover, .cinema-card.active {
+            border-color: #d4af37;
+            background-color: #222;
+            transform: translateX(10px);
+        }
+
+    .btn-directions {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 5px 15px;
+        border: 1px solid #666;
+        border-radius: 20px;
+        color: #ccc;
+        text-decoration: none;
+        font-size: 0.85rem;
+    }
+
+        .btn-directions:hover {
+            background-color: #d4af37;
+            color: black;
+            border-color: #d4af37;
+        }
+</style>
+
+<div class="container mt-5 mb-5">
+    <div class="text-center mb-4 pb-3 border-bottom border-secondary">
+        <h1 class="text-uppercase" style="color: #d4af37; letter-spacing: 2px;">@Lang.Get("Find a Cinema")</h1>
+        <p class="text-white-50">@Lang.Get("Visit us at one of our premium locations.")</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="cinema-card" onclick="focusMap(3.1579, 101.7120, 'KLCC', this)">
+                <h4 class="text-white">Waliu KLCC</h4>
+                <p class="text-white-50 small mb-0">Level 3, Suria KLCC, Kuala Lumpur.</p>
+                <a href="https://www.google.com/maps/search/?api=1&query=Suria+KLCC" target="_blank" class="btn-directions">@Lang.Get("Get Directions")</a>
+            </div>
+
+            <div class="cinema-card" onclick="focusMap(3.1182, 101.6773, 'Mid Valley', this)">
+                <h4 class="text-white">Waliu Mid Valley</h4>
+                <p class="text-white-50 small mb-0">3rd Floor, Mid Valley Megamall.</p>
+                <a href="https://www.google.com/maps/search/?api=1&query=Mid+Valley+Megamall" target="_blank" class="btn-directions">@Lang.Get("Get Directions")</a>
+            </div>
+
+            <div class="cinema-card" onclick="focusMap(3.1504, 101.6158, '1 Utama', this)">
+                <h4 class="text-white">Waliu 1 Utama</h4>
+                <p class="text-white-50 small mb-0">4th Floor, 1 Utama Shopping Centre.</p>
+                <a href="https://www.google.com/maps/search/?api=1&query=1+Utama+Shopping+Centre" target="_blank" class="btn-directions">@Lang.Get("Get Directions")</a>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div id="map"></div>
+        </div>  
+    </div>
+</div>
+
+<script>
+    // 1. Init Map
+    var map = L.map('map').setView([3.1400, 101.6600], 11);
+
+    // 2. Dark Tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 20
+    }).addTo(map);
+
+    // 3. Gold Icon
+    var goldIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    // 4. Hardcoded Markers (Safe & Simple)
+    var markers = {
+        'KLCC': L.marker([3.1579, 101.7120], {icon: goldIcon}).addTo(map).bindPopup("<b>Waliu KLCC</b>"),
+        'Mid Valley': L.marker([3.1182, 101.6773], {icon: goldIcon}).addTo(map).bindPopup("<b>Waliu Mid Valley</b>"),
+        '1 Utama': L.marker([3.1504, 101.6158], {icon: goldIcon}).addTo(map).bindPopup("<b>Waliu 1 Utama</b>")
+    };
+
+    // 5. Fly Animation
+    function focusMap(lat, lng, key, card) {
+        map.flyTo([lat, lng], 15, { duration: 1.5 });
+
+        // Highlight Card
+        document.querySelectorAll('.cinema-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+
+        // Open Popup
+        if(markers[key]) markers[key].openPopup();
+    }
+</script>

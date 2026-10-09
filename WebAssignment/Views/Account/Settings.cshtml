@@ -1,0 +1,303 @@
+﻿@{
+    ViewData["Title"] = "Appearance Settings";
+
+    string currentTheme = ViewBag.CurrentTheme as string ?? "Gold";
+
+    var themes = new[]
+    {
+     new
+     {
+        Name = "Gold",
+        DisplayName = "Champagne Gold",
+        Color = "#C9A86A",
+        Description = "Timeless elegance, crafted for every cinematic moment."
+     },
+     new
+     {
+        Name = "Blue",
+        DisplayName = "Warm Mocha",
+        Color = "#A67C5B",
+        Description = "A comforting blend of warmth, style, and sophistication."
+     },
+     new
+     {
+        Name = "Red",
+        DisplayName = "Vintage Burgundy",
+        Color = "#9B4A4A",
+        Description = "Rich and refined, inspired by classic cinema evenings."
+     },
+     new
+     {
+        Name = "Pink",
+        DisplayName = "Dusty Rose",
+        Color = "#C98F8F",
+        Description = "Soft, graceful, and warmly inviting."
+     },
+     new
+     {
+        Name = "Yellow",
+        DisplayName = "Golden Amber",
+        Color = "#D39A52",
+        Description = "A warm golden glow for a memorable cinema experience."
+     }
+     };
+}
+
+
+<div class="appearance-page"
+     style="
+    display: block !important;
+    position: relative !important;
+    clear: both !important;
+    width: calc(100vw - 80px) !important;
+    max-width: 1200px !important;
+    min-width: 0 !important;
+    margin: 50px auto !important;
+    padding: 0 24px !important;
+    box-sizing: border-box !important;
+    ">
+
+    <div style="
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 45px !important;
+        text-align: center !important;
+        ">
+        <h2 class="gold-title display-5"
+            style="display:block !important; width:100% !important;">
+            Appearance
+        </h2>
+
+        <p class="text-muted"
+           style="display:block !important; width:100% !important;">
+            Customize your cinema experience with a personalized color theme.
+        </p>
+    </div>
+
+    <div class="theme-grid"
+         style="
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: stretch !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        gap: 24px !important;
+        box-sizing: border-box !important;
+        ">
+
+        @foreach (var theme in themes)
+        {
+            bool isActive = string.Equals(
+                theme.Name,
+                currentTheme,
+                StringComparison.OrdinalIgnoreCase
+            );
+
+            <div class="theme-item"
+                 style="
+                display: flex !important;
+                flex: 0 0 calc(33.333% - 16px) !important;
+                width: calc(33.333% - 16px) !important;
+                min-width: 280px !important;
+                max-width: 380px !important;
+                box-sizing: border-box !important;
+                ">
+
+                <div class="appearance-theme-card"
+                     style="
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    justify-content: flex-start !important;
+                    width: 100% !important;
+                    min-width: 280px !important;
+                    min-height: 340px !important;
+                    padding: 30px 24px !important;
+                    overflow: hidden !important;
+                    background-color: #121212 !important;
+                    border: @(isActive ? "2px solid " + theme.Color : "1px solid #333333") !important;
+                    border-radius: 8px !important;
+                    box-sizing: border-box !important;
+                    box-shadow: @(isActive ? "0 0 20px " + theme.Color : "0 5px 15px rgba(0,0,0,0.35)") !important;
+                    ">
+
+                    <div style="
+                        display: block !important;
+                        flex: 0 0 80px !important;
+                        width: 80px !important;
+                        min-width: 80px !important;
+                        max-width: 80px !important;
+                        height: 80px !important;
+                        min-height: 80px !important;
+                        max-height: 80px !important;
+                        margin: 0 auto 24px auto !important;
+                        background-color: @theme.Color !important;
+                        border: 3px solid #ffffff !important;
+                        border-radius: 50% !important;
+                        box-shadow: 0 5px 15px rgba(0,0,0,0.5) !important;
+                        box-sizing: border-box !important;
+                        ">
+                    </div>
+
+                    <div style="
+                        display: block !important;
+                        width: 100% !important;
+                        margin-bottom: 16px !important;
+                        color: #ffffff !important;
+                        font-family: Arial, sans-serif !important;
+                        font-size: 20px !important;
+                        font-weight: 700 !important;
+                        line-height: 1.4 !important;
+                        text-align: center !important;
+                        text-transform: uppercase !important;
+                        white-space: normal !important;
+                        overflow-wrap: normal !important;
+                        word-break: normal !important;
+                        ">
+                        @theme.DisplayName
+
+                        @if (isActive)
+                        {
+                            <span style="
+                                display: inline-block !important;
+                                margin-left: 8px !important;
+                                padding: 5px 9px !important;
+                                color: #ffffff !important;
+                                background-color: #198754 !important;
+                                border-radius: 5px !important;
+                                font-size: 11px !important;
+                                line-height: 1 !important;
+                                vertical-align: middle !important;
+                                ">
+                                Active
+                            </span>
+                        }
+                    </div>
+
+                    <p style="
+                        display: block !important;
+                        flex-grow: 1 !important;
+                        width: 100% !important;
+                        margin: 0 0 24px 0 !important;
+                        color: #aaaaaa !important;
+                        font-family: Arial, sans-serif !important;
+                        font-size: 15px !important;
+                        line-height: 1.6 !important;
+                        text-align: center !important;
+                        white-space: normal !important;
+                        overflow-wrap: normal !important;
+                        word-break: normal !important;
+                        ">
+                        @theme.Description
+                    </p>
+
+                    <form asp-controller="Account"
+                          asp-action="ChangeTheme"
+                          method="post"
+                          style="
+                        display: block !important;
+                        width: 100% !important;
+                        min-width: 0 !important;
+                        margin: 0 !important;
+                        ">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="selectedColor"
+                               value="@theme.Name" />
+
+                        <button type="submit"
+                                style="
+                            display: block !important;
+                            width: 100% !important;
+                            min-width: 0 !important;
+                            min-height: 52px !important;
+                            padding: 12px 15px !important;
+                            margin: 0 !important;
+                            color: #000000 !important;
+                            background-color: @theme.Color !important;
+                            border: none !important;
+                            border-radius: 5px !important;
+                            font-family: Arial, sans-serif !important;
+                            font-size: 16px !important;
+                            font-weight: 700 !important;
+                            line-height: 1.4 !important;
+                            letter-spacing: 1px !important;
+                            text-align: center !important;
+                            text-transform: uppercase !important;
+                            white-space: nowrap !important;
+                            cursor: pointer !important;
+                            box-sizing: border-box !important;
+                            ">
+                            Select Theme
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+        }
+    </div>
+
+    <div style="
+        display: block !important;
+        clear: both !important;
+        width: 100% !important;
+        margin-top: 45px !important;
+        text-align: center !important;
+        ">
+        <a asp-controller="Account"
+           asp-action="Profile"
+           style="
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            padding: 10px 22px !important;
+            color: #aaaaaa !important;
+            border: 1px solid #777777 !important;
+            border-radius: 30px !important;
+            font-family: Arial, sans-serif !important;
+            text-decoration: none !important;
+            ">
+
+            <i class="bi bi-arrow-left"></i>
+            Back to Profile
+        </a>
+    </div>
+
+</div>
+
+<style>
+    .appearance-theme-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .appearance-theme-card:hover {
+            transform: translateY(-8px);
+        }
+
+    @@media (max-width: 1000px) {
+        .theme-item {
+            flex-basis: calc(50% - 12px) !important;
+            width: calc(50% - 12px) !important;
+            max-width: none !important;
+        }
+    }
+
+    @@media (max-width: 650px) {
+        .appearance-page {
+            width: calc(100vw - 30px) !important;
+            margin-top: 30px !important;
+            padding: 0 !important;
+        }
+
+        .theme-item {
+            flex-basis: 100% !important;
+            width: 100% !important;
+            max-width: none !important;
+        }
+    }
+</style>

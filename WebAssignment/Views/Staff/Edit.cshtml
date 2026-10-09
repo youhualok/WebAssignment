@@ -1,0 +1,60 @@
+﻿@model WebAssignment.Models.User
+
+@{
+    ViewData["Title"] = "Edit Admin";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card bg-dark border-warning shadow-lg">
+                <div class="card-header bg-black border-bottom border-warning">
+                    <h4 class="gold-title mb-0">Edit Admin Profile</h4>
+                </div>
+                <div class="card-body p-4">
+
+                    <form asp-action="Edit">
+                        <input type="hidden" asp-for="UserId" />
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">Username</label>
+                            <input asp-for="Username" class="form-control bg-secondary text-white border-0" readonly />
+                            <small class="text-muted">Username cannot be changed.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">Full Name</label>
+                            <input asp-for="FullName" class="form-control bg-black text-white border-secondary" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">Email</label>
+                            <input asp-for="Email" type="email" class="form-control bg-black text-white border-secondary" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">New Password</label>
+                            <input asp-for="Password" type="password" value="" class="form-control bg-black text-white border-secondary" placeholder="Leave empty to keep current password" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="text-warning small text-uppercase fw-bold">Assign Branch</label>
+                            <select name="SelectedCinemaId" class="form-select bg-black text-white border-secondary" asp-items="ViewBag.Cinemas">
+                                <option value="">-- No Assignment (Super Admin) --</option>
+                            </select>
+                            <div class="form-text text-muted">
+                                Changing this will change their access level immediately.
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning fw-bold">Save Changes</button>
+                            <a asp-action="Index" class="btn btn-outline-light">Cancel</a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

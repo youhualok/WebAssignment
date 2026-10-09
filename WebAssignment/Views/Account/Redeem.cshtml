@@ -1,0 +1,370 @@
+﻿@model WebAssignment.Models.User
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("Redeem Rewards");
+}
+
+<style>
+    body {
+        background-color: #000;
+        color: white;
+    }
+
+    /* --- [NEW] BACK BUTTON STYLE --- */
+    .hover-gold {
+        transition: color 0.3s ease, transform 0.3s ease;
+    }
+
+        .hover-gold:hover {
+            color: #d4af37 !important;
+            transform: translateX(-5px);
+        }
+
+    /* --- HEADER SECTION --- */
+    .points-header {
+        text-align: center;
+        padding: 50px 20px;
+        background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
+        border-bottom: 2px solid #d4af37;
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .points-display {
+        font-size: 3.5rem;
+        font-weight: 900;
+        color: #d4af37;
+        text-shadow: 0 0 25px rgba(212, 175, 55, 0.5);
+        margin: 10px 0;
+    }
+
+    /* --- REWARD CARDS --- */
+    .reward-card {
+        background-color: #111;
+        border: 1px solid #333;
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+        .reward-card:hover {
+            border-color: #d4af37;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+        }
+
+    .card-icon {
+        font-size: 3rem;
+        color: #d4af37;
+        margin-bottom: 15px;
+    }
+
+    .points-cost {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+        margin: 15px 0;
+    }
+
+    .btn-redeem {
+        background-color: #d4af37;
+        color: black;
+        font-weight: 900;
+        border: none;
+        width: 100%;
+        padding: 12px;
+        border-radius: 50px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: 0.3s;
+    }
+
+        .btn-redeem:hover:not(:disabled) {
+            background-color: #f2d06b;
+            box-shadow: 0 0 15px #d4af37;
+        }
+
+        .btn-redeem:disabled {
+            background-color: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+    /* --- ADVANCED HISTORY STYLES --- */
+    .history-section-title {
+        color: #d4af37;
+        font-weight: bold;
+        border-bottom: 1px solid #333;
+        padding-bottom: 15px;
+        margin-top: 60px;
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .history-card {
+        background-color: #121212;
+        border: 1px solid #333;
+        border-left: 4px solid #d4af37; /* Gold accent */
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .history-card.used {
+            border-left-color: #555; /* Gray accent for used */
+            opacity: 0.7;
+        }
+
+        .history-card:hover {
+            background-color: #1a1a1a;
+            transform: translateX(5px);
+        }
+
+    .history-date {
+        font-size: 0.85rem;
+        color: #888;
+        margin-bottom: 5px;
+    }
+
+    .history-name {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .history-cost {
+        color: #dc3545; /* Red for deduction */
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .code-box {
+        background-color: #000;
+        border: 1px dashed #555;
+        padding: 8px 15px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: #d4af37;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .code-box.used {
+            color: #777;
+            text-decoration: line-through;
+            border-color: #333;
+        }
+
+    .status-badge {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .status-active {
+        background-color: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+        border: 1px solid #28a745;
+    }
+
+    .status-used {
+        background-color: rgba(108, 117, 125, 0.2);
+        color: #adb5bd;
+        border: 1px solid #6c757d;
+    }
+
+    .copy-btn {
+        background: none;
+        border: none;
+        color: #d4af37;
+        cursor: pointer;
+        padding: 0;
+        font-size: 1.1rem;
+        font-size: 1.1rem;
+        transition: color 0.2s;
+    }
+
+        .copy-btn:hover {
+            color: white;
+        }
+</style>
+
+<div class="container mt-4 mb-2">
+    <a asp-controller="Account" asp-action="Profile" class="text-white-50 text-decoration-none d-inline-flex align-items-center hover-gold">
+        <i class="bi bi-arrow-left me-2"></i> @Lang.Get("Back to Profile")
+    </a>
+</div>
+
+<div class="points-header">
+    <h1 class="mb-0 text-uppercase" style="letter-spacing: 2px;">@Lang.Get("My Rewards")</h1>
+    <p class="text-white-50">@Lang.Get("Redeem your points for exclusive discounts")</p>
+
+    <div class="points-display">
+        <i class="bi bi-star-fill"></i> @Model.Points
+    </div>
+
+    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">@Lang.Get("AVAILABLE POINTS")</span>
+</div>
+
+<div class="container pb-5">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success border-success text-center shadow">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger border-danger text-center shadow">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+        </div>
+    }
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="reward-card">
+                <div>
+                    <i class="bi bi-cup-hot-fill card-icon"></i>
+                    <h4>@Lang.Get("RM 5 Off Snacks")</h4>
+                    <p class="text-white-50">@Lang.Get("Enjoy a discount on any popcorn or drink combo.")</p>
+                </div>
+                <div>
+                    <div class="points-cost">500 @Lang.Get("PTS")</div>
+                    <form asp-action="ClaimReward" method="post">
+                        <input type="hidden" name="type" value="SNACK5" />
+                        <input type="hidden" name="cost" value="500" />
+                        <button type="submit" class="btn-redeem" @(Model.Points < 500 ? "disabled" : "")>
+                            @(Model.Points < 500 ? Lang.Get("Not Enough Points") : Lang.Get("Redeem Now"))
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="reward-card">
+                <div>
+                    <i class="bi bi-ticket-perforated-fill card-icon"></i>
+                    <h4>@Lang.Get("RM 10 Off Bundle")</h4>
+                    <p class="text-white-50">@Lang.Get("Save RM 10 when you buy Tickets + Snacks together.")</p>
+                </div>
+                <div>
+                    <div class="points-cost">1000 @Lang.Get("PTS")</div>
+                    <form asp-action="ClaimReward" method="post">
+                        <input type="hidden" name="type" value="TICKET10" />
+                        <input type="hidden" name="cost" value="1000" />
+                        <button type="submit" class="btn-redeem" @(Model.Points < 1000 ? "disabled" : "")>
+                            @(Model.Points < 1000 ? Lang.Get("Not Enough Points") : Lang.Get("Redeem Now"))
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="reward-card">
+                <div>
+                    <i class="bi bi-award-fill card-icon"></i>
+                    <h4>@Lang.Get("Free Ticket")</h4>
+                    <p class="text-white-50">@Lang.Get("Get one standard hall movie ticket absolutely free.")</p>
+                </div>
+                <div>
+                    <div class="points-cost">2500 @Lang.Get("PTS")</div>
+                    <form asp-action="ClaimReward" method="post">
+                        <input type="hidden" name="type" value="FREETICKET" />
+                        <input type="hidden" name="cost" value="2500" />
+                        <button type="submit" class="btn-redeem" @(Model.Points < 2500 ? "disabled" : "")>
+                            @(Model.Points < 2500 ? Lang.Get("Not Enough Points") : Lang.Get("Redeem Now"))
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="history-section-title">
+        <i class="bi bi-clock-history"></i> @Lang.Get("Redemption History")
+    </h3>
+
+    @if (Model.UserRewards != null && Model.UserRewards.Any())
+    {
+        <div class="row">
+            @foreach (var item in Model.UserRewards.OrderByDescending(r => r.RedeemedDate))
+            {
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="history-card @(item.IsUsed ? "used" : "")">
+
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="history-date">
+                                <i class="bi bi-calendar3 me-1"></i> @item.RedeemedDate.ToString("dd MMM yyyy, hh:mm tt")
+                            </span>
+
+                            @if (item.IsUsed)
+                            {
+                                <span class="status-badge status-used"><i class="bi bi-check-all"></i> @Lang.Get("USED")</span>
+                            }
+                            else
+                            {
+                                <span class="status-badge status-active"><i class="bi bi-stars"></i> @Lang.Get("ACTIVE")</span>
+                            }
+                        </div>
+
+                        <div class="history-name">@Lang.Get(item.RewardName)</div>
+                        <div class="history-cost mb-3">-@item.PointsCost @Lang.Get("Points")</div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="code-box @(item.IsUsed ? "used" : "")" id="code-@item.UserRewardId">
+                                @item.PromoCode
+                            </div>
+
+                            @if (!item.IsUsed)
+                            {
+                                <button class="copy-btn" onclick="copyToClipboard('@item.PromoCode')" title="@Lang.Get("Copy Code")">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            }
+                        </div>
+
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5 border border-secondary rounded bg-dark">
+            <i class="bi bi-gift display-1 text-secondary opacity-25"></i>
+            <h4 class="text-white mt-3">@Lang.Get("No Rewards Yet")</h4>
+            <p class="text-white-50">@Lang.Get("You haven't redeemed any rewards. Start saving points today!")</p>
+        </div>
+    }
+
+</div>
+
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            alert("@Lang.Get("Code copied"): " + text);
+        }, function(err) {
+            console.error('Async: Could not copy text: ', err);
+        });
+    }
+</script>

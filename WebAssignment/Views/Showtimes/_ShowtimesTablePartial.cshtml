@@ -1,0 +1,165 @@
+﻿@using X.PagedList.Mvc.Core
+@using X.PagedList
+@model IPagedList<WebAssignment.Models.Showtime>
+
+<style>
+    .pagination-dark .page-link {
+        background-color: #1a1a1a;
+        color: #d4af37;
+        border-color: #333;
+    }
+
+        .pagination-dark .page-link:hover {
+            background-color: #333;
+            color: #fff;
+        }
+
+    .pagination-dark .page-item.active .page-link {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        border-color: #d4af37 !important;
+        font-weight: bold;
+    }
+
+    .pagination-dark .page-item.disabled .page-link {
+        background-color: #000;
+        color: #444;
+        border-color: #222;
+    }
+
+    .sort-header {
+        color: #d4af37;
+        text-decoration: none;
+        display: block;
+        transition: 0.2s;
+    }
+
+        .sort-header:hover {
+            color: #fff;
+        }
+</style>
+
+@* REMOVED OUTER DIV WITH ID (It is now in Index.cshtml) *@
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="text-muted small">
+        Showing Page <span class="text-white fw-bold">@Model.PageNumber</span> of @Model.PageCount
+        (@Model.TotalItemCount total items)
+    </span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-dark table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                @* AJAX SORTING HEADERS *@
+                <th>
+                    <a asp-action="Index"
+                       asp-route-sortOrder="@ViewData["TitleSortParm"]"
+                       asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                       asp-route-branchId="@ViewData["BranchFilter"]"
+                       data-ajax="true" data-ajax-update="#showtimesTableContainer"
+                       class="sort-header">
+                        Movie Title <i class="bi bi-arrow-down-up small ms-1"></i>
+                    </a>
+                </th>
+                <th>
+                    <a asp-action="Index"
+                       asp-route-sortOrder="@ViewData["DateSortParm"]"
+                       asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                       asp-route-branchId="@ViewData["BranchFilter"]"
+                       data-ajax="true" data-ajax-update="#showtimesTableContainer"
+                       class="sort-header">
+                        Date / Time <i class="bi bi-arrow-down-up small ms-1"></i>
+                    </a>
+                </th>
+                <th>
+                    <a asp-action="Index"
+                       asp-route-sortOrder="@ViewData["HallSortParm"]"
+                       asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                       asp-route-branchId="@ViewData["BranchFilter"]"
+                       data-ajax="true" data-ajax-update="#showtimesTableContainer"
+                       class="sort-header">
+                        Hall <i class="bi bi-arrow-down-up small ms-1"></i>
+                    </a>
+                </th>
+                <th>Cinema</th>
+                <th>
+                    <a asp-action="Index"
+                       asp-route-sortOrder="@ViewData["PriceSortParm"]"
+                       asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                       asp-route-branchId="@ViewData["BranchFilter"]"
+                       data-ajax="true" data-ajax-update="#showtimesTableContainer"
+                       class="sort-header">
+                        Price (RM) <i class="bi bi-arrow-down-up small ms-1"></i>
+                    </a>
+                </th>
+                <th>Seats</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model == null || !Model.Any())
+            {
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        <i class="bi bi-search display-6 d-block mb-2"></i>
+                        No showtimes found matching your filter.
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="text-warning fw-bold">@item.Movie?.Title</td>
+                        <td>
+                            @item.ShowtimeDate.ToString("ddd, dd MMM") <br />
+                            <span class="badge bg-info">@item.StartTime.ToString("hh:mm tt")</span>
+                        </td>
+                        <td>@item.Hall?.Name</td>
+                        <td>@item.Hall?.Cinema?.Name</td>
+                        <td>@item.TicketPrice.ToString("N2")</td>
+                        <td>
+                            @item.AvailableSeats / @item.MaxSeats
+                        </td>
+                        <td>
+                            <a asp-action="Delete" asp-route-id="@item.ShowtimeId" class="btn btn-sm btn-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@* PAGINATION *@
+<div class="d-flex justify-content-center mt-3">
+    @Html.PagedListPager(Model, page => Url.Action("Index", new {
+    page = page,
+        sortOrder = ViewData["CurrentSort"],
+        currentFilter = ViewData["CurrentFilter"],
+        branchId = ViewData["BranchFilter"]
+        }),
+        new PagedListRenderOptions
+        {
+            FunctionToTransformEachPageLink = (li, a) =>
+            {
+                a.Attributes.Add("data-ajax", "true");
+                a.Attributes.Add("data-ajax-update", "#showtimesTableContainer");
+                a.Attributes.Add("data-ajax-mode", "replace");
+                a.Attributes.Add("data-ajax-method", "GET");
+
+                li.InnerHtml.AppendHtml(a);
+                return li;
+            },
+            UlElementClasses = new[] { "pagination", "pagination-dark" },
+            LiElementClasses = new[] { "page-item" },
+            PageClasses = new[] { "page-link" },
+            ActiveLiElementClass = "active",
+            MaximumPageNumbersToDisplay = 5
+        })
+</div>

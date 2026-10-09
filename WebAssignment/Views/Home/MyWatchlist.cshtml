@@ -1,0 +1,71 @@
+﻿@model IEnumerable<WebAssignment.Models.Movie>
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("My Watchlist");
+}
+
+<div class="container mt-5">
+    <h2 class="gold-title mb-4"><i class="bi bi-heart-fill text-danger me-2"></i> @Lang.Get("My Watchlist")</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center text-muted py-5">
+            <h4>@Lang.Get("Your watchlist is empty.")</h4>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-warning mt-3">@Lang.Get("Browse Movies")</a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var movie in Model)
+            {
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card h-100 shadow-sm border-0 bg-dark text-white">
+                        <img src="@movie.ImageUrl" class="card-img-top" style="height: 300px; object-fit: cover;" alt="@movie.Title">
+                        <div class="card-body">
+                            <h5 class="card-title text-truncate">@movie.Title</h5>
+                            <p class="small text-muted">@movie.Genre</p>
+
+                            <div class="d-flex justify-content-between mt-3">
+                                <a asp-controller="Home" asp-action="Details" asp-route-id="@movie.MovieId" class="btn btn-sm btn-primary">@Lang.Get("Book Now")</a>
+
+                                <button type="button"
+                                        onclick="removeFromWatchlist(this, @movie.MovieId)"
+                                        class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function removeFromWatchlist(btn, movieId) {
+            // Translated Confirmation Message
+            if (confirm("@Lang.Get("Are you sure you want to remove this movie?")")) {
+                $.post('/Home/ToggleWatchlist', { movieId: movieId }, function (res) {
+                    if (res.success) {
+                        var card = $(btn).closest('.col-md-3');
+                        card.fadeOut(400, function() {
+                            $(this).remove();
+                            if ($('.col-md-3').length === 0) {
+                                window.location.reload();
+                            }
+                        });
+                    } else {
+                        alert("@Lang.Get("Failed to remove. Please try again.")");
+                    }
+                }).fail(function () {
+                    alert("@Lang.Get("Session expired or feature unavailable. Please login.")");
+                    window.location.href = '/Account/Login';
+                });
+            }
+        }
+    </script>
+}

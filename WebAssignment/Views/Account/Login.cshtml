@@ -1,0 +1,172 @@
+﻿@model WebAssignment.Models.LoginViewModel
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = "Login";
+}
+
+<style>
+    body {
+        background-color: #000;
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .login-card {
+        background-color: #121212;
+        border: 1px solid #333;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+        max-width: 450px;
+        margin: 80px auto;
+    }
+
+    .custom-input-group {
+        position: relative;
+        margin-bottom: 25px;
+    }
+
+    .form-control {
+        background-color: #1a1a1a !important;
+        color: white !important;
+        border: 1px solid #444;
+        height: 55px;
+        padding-left: 45px;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+        .form-control:focus {
+            border-color: #d4af37 !important;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            background-color: #222 !important;
+        }
+
+        .form-control::placeholder {
+            color: #666 !important;
+            font-size: 0.9rem;
+        }
+
+    .input-icon {
+        position: absolute;
+        top: 18px;
+        left: 15px;
+        color: #d4af37;
+        font-size: 1.2rem;
+        z-index: 10;
+    }
+
+    input:-webkit-autofill {
+        -webkit-text-fill-color: white !important;
+        -webkit-box-shadow: 0 0 0 50px #1a1a1a inset !important;
+    }
+
+    .btn-gold-glow {
+        background-image: linear-gradient(to right, #d4af37 0%, #f2d06b 51%, #d4af37 100%);
+        margin-top: 10px;
+        padding: 15px;
+        text-align: center;
+        text-transform: uppercase;
+        transition: 0.5s;
+        background-size: 200% auto;
+        color: black;
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        border-radius: 50px;
+        border: none;
+        font-weight: 900;
+        letter-spacing: 2px;
+        font-size: 1.1rem;
+        width: 100%;
+        cursor: pointer;
+    }
+
+        .btn-gold-glow:hover {
+            background-position: right center;
+            color: #000;
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+        }
+
+    .link-gold {
+        color: #d4af37;
+        text-decoration: none;
+        font-weight: bold;
+        transition: color 0.3s;
+    }
+
+        .link-gold:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+    .divider {
+        height: 1px;
+        background: #333;
+        margin: 30px 0;
+    }
+</style>
+
+<div class="container">
+    <div class="login-card">
+        <a asp-controller="Home" asp-action="Index" class="text-white-50 text-decoration-none d-inline-flex align-items-center mb-4 hover-gold">
+            <i class="bi bi-arrow-left me-2"></i> @Lang.Get("Back to Home")
+        </a>
+        <div class="text-center mb-4">
+            <i class="bi bi-film display-4" style="color: #d4af37;"></i>
+            <h2 class="mt-2" style="color: #d4af37; letter-spacing: 1px;">@Lang.Get("Welcome Back")</h2>
+            <p class="text-muted">@Lang.Get("Enter your credentials to continue.")</p>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success text-center">@TempData["Success"]</div>
+        }
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger text-center">@ViewBag.Error</div>
+        }
+
+        <form asp-action="Login" method="post" autocomplete="off">
+            @Html.AntiForgeryToken()
+
+            <div class="custom-input-group">
+                <i class="bi bi-person-fill input-icon"></i>
+                <input name="username" class="form-control" placeholder="@Lang.Get("Username")" required />
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-lock-fill input-icon"></i>
+                <input name="password" type="password" class="form-control" placeholder="@Lang.Get("Password")" required />
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-shield-lock-fill input-icon"></i>
+                <input name="captchaAnswer" type="number" class="form-control" placeholder="@Lang.Get("Security Question"): @ViewBag.CaptchaQuestion" required />
+                <span class="input-hint" style="color:#888; font-size:0.8rem; margin-left: 5px; margin-top: 5px; display:block;">
+                    <i class="bi bi-calculator" style="color: #d4af37; margin-right: 5px;"></i> @Lang.Get("Solve the math")
+                </span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="rememberMe" value="true" id="rememberMe" style="background-color: #333; border-color: #555;">
+                    <label class="form-check-label text-muted small" for="rememberMe">@Lang.Get("Remember Me")</label>
+                </div>
+                <a asp-action="ForgotPassword" class="link-gold small">@Lang.Get("Forgot Password?")</a>
+            </div>
+
+            <button type="submit" class="btn-gold-glow">
+                @Lang.Get("Login")
+            </button>
+        </form>
+
+        <div class="divider"></div>
+
+        <div class="text-center">
+            <span class="text-muted">@Lang.Get("Don't have an account?")</span>
+            <a asp-action="Register" class="link-gold ms-1">@Lang.Get("Join Now")</a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,68 @@
+﻿@model WebAssignment.Models.User
+
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card bg-dark border-secondary shadow">
+                <div class="card-header bg-secondary bg-opacity-25 text-white fw-bold">
+                    <i class="bi bi-person-gear me-2"></i> Edit Staff / User
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit">
+
+                        <input type="hidden" asp-for="UserId" />
+
+                        <input type="hidden" asp-for="Password" />
+                        <input type="hidden" asp-for="Points" />
+                        <input type="hidden" asp-for="ProfilePhotoPath" />
+
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Username" class="form-label text-white"></label>
+                            <input asp-for="Username" class="form-control bg-dark text-white border-secondary" readonly />
+                            <small class="text-muted">Username cannot be changed.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="FullName" class="form-label text-white"></label>
+                            <input asp-for="FullName" class="form-control bg-dark text-white border-secondary" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label text-white"></label>
+                            <input asp-for="Email" class="form-control bg-dark text-white border-secondary" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Role" class="form-label text-white"></label>
+                            <select asp-for="Role" class="form-select bg-dark text-white border-secondary" asp-items="Html.GetEnumSelectList<WebAssignment.Models.UserRole>()"></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-white">New Password (Optional)</label>
+                            <input type="password" name="NewPassword" class="form-control bg-dark text-white border-secondary" placeholder="Leave blank to keep current password" />
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-warning fw-bold">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

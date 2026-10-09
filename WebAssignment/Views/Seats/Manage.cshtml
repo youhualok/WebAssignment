@@ -1,0 +1,244 @@
+﻿@using System.Globalization
+@inject WebAssignment.Helpers.LanguageService Lang
+@model WebAssignment.Models.Hall
+
+@{
+    ViewData["Title"] = Lang.Get("Edit Seats") + " - " + Model.Name;
+}
+
+<div class="container mt-4 mb-5">
+    @Html.AntiForgeryToken()
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="gold-title mb-0">@Model.Cinema.Name <span class="text-white">| @Model.Name</span></h3>
+            <p class="text-muted">@Lang.Get("Click a seat to mark it as") <span class="text-danger fw-bold">@Lang.Get("Damaged/Unavailable")</span>.</p>
+        </div>
+        <a asp-action="Index" class="btn btn-secondary">@Lang.Get("Back to List")</a>
+    </div>
+
+    <div class="container d-flex justify-content-center">
+        <div class="seat-map-container p-5 rounded shadow-lg" style="background: #101010; border: 1px solid #333; width: 100%; max-width: 900px;">
+
+            <div class="screen-container mb-5 text-center">
+                <div class="cinema-screen"></div>
+                <small class="text-muted mt-2 d-block">@Lang.Get("SCREEN")</small>
+            </div>
+
+            <div class="d-flex flex-column align-items-center gap-4">
+                @foreach (var rowGroup in Model.Seats.GroupBy(s => s.Row))
+                {
+                    var seatsInRow = rowGroup.OrderBy(s => s.Number).ToList();
+                    if (rowGroup.Key == "E")
+                    {
+                        seatsInRow = seatsInRow.Take(4).ToList();
+                    }
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="row-label text-muted fw-bold" style="width: 20px;">@rowGroup.Key</span>
+
+                        @foreach (var seat in seatsInRow)
+                        {
+                            bool isTwin = seat.Row == "E";
+                            bool isDamaged = !seat.IsAvailable;
+
+                            <div class="seat-wrapper" onclick="toggleSeatStatus(this, @seat.SeatId)">
+
+                                <div class="seat-visual @(isDamaged ? "damaged" : "") @(isTwin ? "twin" : "")"
+                                     id="seat-visual-@seat.SeatId">
+
+                                    <span class="seat-headrest"></span>
+
+                                    <span class="seat-content" id="seat-content-@seat.SeatId">
+                                        @if (isDamaged)
+                                        {
+                                            <i class="bi bi-x-lg text-danger"></i>
+                                        }
+                                        else
+                                        {
+                                            @seat.Number
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                        <span class="row-label text-muted fw-bold" style="width: 20px;">@rowGroup.Key</span>
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex justify-content-center gap-4 mt-5">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="legend-box available"><span class="seat-headrest-legend"></span></div>
+                    <span class="text-muted small">@Lang.Get("Working")</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="legend-box damaged">
+                        <span class="seat-headrest-legend"></span>
+                        <i class="bi bi-x-lg text-danger" style="font-size: 10px; z-index:5;"></i>
+                    </div>
+                    <span class="text-muted small">@Lang.Get("Damaged (Blocked)")</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ... (Keep your existing CSS styles exactly as they are) ... */
+    .screen-container {
+        perspective: 400px;
+    }
+
+    .cinema-screen {
+        height: 15px;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 20px 50px rgba(255, 255, 255, 0.4);
+        transform: rotateX(-5deg) translateY(-10px);
+        opacity: 0.8;
+    }
+
+    .seat-wrapper {
+        cursor: pointer;
+    }
+
+    .seat-visual {
+        width: 40px;
+        height: 35px;
+        border-radius: 0 0 6px 6px;
+        background-color: #333;
+        border: 1px solid #555;
+        border-top: none;
+        border-bottom: 3px solid #222;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin-top: 10px;
+        transition: 0.2s;
+    }
+
+    .seat-headrest {
+        position: absolute;
+        top: -10px;
+        left: -1px;
+        right: -1px;
+        height: 12px;
+        background-color: #333;
+        border: 1px solid #555;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        z-index: 1;
+    }
+
+    .seat-content {
+        font-size: 0.7rem;
+        color: #aaa;
+        font-weight: 600;
+        z-index: 5;
+        margin-top: -2px;
+    }
+
+    .seat-visual.twin {
+        width: 86px;
+        background: linear-gradient(90deg, #3e4a5c 42px, #2a3340 42px, #2a3340 44px, #3e4a5c 44px);
+        border-color: #4e5d72;
+    }
+
+        .seat-visual.twin .seat-headrest {
+            background: linear-gradient(90deg, #3e4a5c 42px, #2a3340 42px, #2a3340 44px, #3e4a5c 44px);
+            border-color: #4e5d72;
+        }
+
+    .seat-visual:hover {
+        border-color: var(--gold-main);
+        transform: scale(1.1);
+    }
+
+        .seat-visual:hover .seat-headrest {
+            border-color: var(--gold-main);
+        }
+
+    .seat-visual.damaged {
+        background: #2c0b0e !important;
+        border-color: #5c1e23;
+    }
+
+        .seat-visual.damaged .seat-headrest {
+            background: #2c0b0e !important;
+            border-color: #5c1e23;
+        }
+
+        .seat-visual.damaged .seat-content {
+            color: red;
+            opacity: 0.8;
+        }
+
+    .legend-box {
+        width: 25px;
+        height: 25px;
+        border-radius: 0 0 6px 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin-top: 8px;
+    }
+
+        .legend-box .seat-headrest-legend {
+            position: absolute;
+            top: -6px;
+            left: -1px;
+            right: -1px;
+            height: 8px;
+            border-radius: 6px 6px 0 0;
+            border: 1px solid inherit;
+            background: inherit;
+        }
+
+        .legend-box.available {
+            background: #333;
+            border: 1px solid #555;
+        }
+
+        .legend-box.damaged {
+            background: #2c0b0e;
+            border: 1px solid #5c1e23;
+        }
+</style>
+
+@section Scripts {
+    <script>
+        function toggleSeatStatus(wrapper, seatId) {
+            $.post('/Seats/ToggleStatus', {
+                seatId: seatId,
+                __RequestVerificationToken:
+                    document.querySelector(
+                        'input[name="__RequestVerificationToken"]'
+                    ).value
+            }, function(res) {
+                if (res.success) {
+                    const visual = document.getElementById('seat-visual-' + seatId);
+                    const content = document.getElementById('seat-content-' + seatId);
+
+                    if (res.isAvailable === false) {
+                        // Mark as Damaged
+                        visual.classList.add('damaged');
+                        content.innerHTML = '<i class="bi bi-x-lg text-danger"></i>';
+                    } else {
+                        // Restore to Available
+                        visual.classList.remove('damaged');
+                        content.innerText = "Ok";
+                        setTimeout(() => location.reload(), 500); // Quick refresh to show number again
+                    }
+                }
+            }).fail(function() {
+                alert("@Lang.Get("Error connecting to server.")");
+            });
+        }
+    </script>
+}

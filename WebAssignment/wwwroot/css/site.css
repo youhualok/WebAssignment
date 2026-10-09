@@ -1,0 +1,412 @@
+/* =========================================
+   1. DESIGN SYSTEM (VIP BLACK & GOLD)
+   ========================================= */
+:root {
+    /* GOLD COLORS */
+    --gold-main: #c9a86a; /* Standard Gold */
+    --gold-bright: #e2c58d; /* Highlight */
+    --gold-dark: #8f6a3d; /* Shadow Gold */
+    /* THE LUXURY GRADIENT */
+    --gold-gradient: linear-gradient(135deg, #8f6a3d 0%, #e2c58d 45%, #fff1c9 50%, #c9a86a 100%);
+    /* DARK PALETTE */
+    --bg-body: #050505; /* Pure Black */
+    --bg-card: #121212; /* Matte Black */
+    --bg-input: #1e1e1e; /* Dark Grey for inputs */
+    /* TEXT */
+    --text-white: #e0e0e0; /* Off-white for readability */
+    --text-muted: #888888;
+    /* BORDERS & SHAPES */
+    --border-subtle: #333333;
+    --radius-md: 4px; /* Sharp, expensive look */
+    /* SHADOWS */
+    --shadow-glow: 0 0 20px rgba(191, 149, 63, 0.15);
+}
+
+/* =========================================
+   THEME OVERRIDES
+   ========================================= */
+
+/* BLUE THEME */
+[data-theme="Blue"] {
+    --gold-main: #a67c5b;
+    --gold-bright: #d2aa87;
+    --gold-dark: #70503a;
+    --gold-gradient: linear-gradient( 135deg, #70503a 0%, #d2aa87 50%, #a67c5b 100% );
+    --shadow-glow: 0 0 20px rgba(166, 124, 91, 0.25);
+}
+
+/* RED THEME */
+[data-theme="Red"] {
+    --gold-main: #9b4a4a;
+    --gold-bright: #cf8580;
+    --gold-dark: #682f32;
+    --gold-gradient: linear-gradient( 135deg, #682f32 0%, #cf8580 50%, #9b4a4a 100% );
+    --shadow-glow: 0 0 20px rgba(155, 74, 74, 0.25);
+}
+
+/* PINK THEME */
+[data-theme="Pink"] {
+    --gold-main: #c98f8f;
+    --gold-bright: #e6b8af;
+    --gold-dark: #906363;
+    --gold-gradient: linear-gradient( 135deg, #906363 0%, #e6b8af 50%, #c98f8f 100% );
+    --shadow-glow: 0 0 20px rgba(201, 143, 143, 0.25);
+}
+
+/* YELLOW (CYBERPUNK) THEME */
+[data-theme="Yellow"] {
+    --gold-main: #d39a52;
+    --gold-bright: #edc27e;
+    --gold-dark: #93642f;
+    --gold-gradient: linear-gradient( 135deg, #93642f 0%, #edc27e 50%, #d39a52 100% );
+    --shadow-glow: 0 0 20px rgba(211, 154, 82, 0.25);
+}
+
+
+/* =========================================
+   2. GLOBAL LAYOUT (FIXES FOOTER ISSUE)
+   ========================================= */
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-white);
+    /* Flexbox Layout to push footer down */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Expands to fill space, pushing footer to bottom */
+body > .container {
+    flex: 1;
+    width: 100%;
+    padding-bottom: 2rem; /* Gap before footer */
+}
+
+/* =========================================
+   3. TYPOGRAPHY (ELEGANT FONTS)
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* --- FORCE GOLD HEADINGS GLOBALLY --- */
+h1, h2, h3, h4, h5, h6, .display-4, .gold-title, .text-primary {
+    font-family: 'Playfair Display', serif; /* Luxury Serif */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    /* Gold Gradient Text */
+    background: var(--gold-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* Fallback Color */
+    color: var(--gold-main) !important;
+    text-shadow: none;
+    margin-bottom: 1rem;
+}
+
+/* Description Text */
+p, .lead, .text-muted {
+    font-family: 'Inter', sans-serif;
+    color: #bbbbbb !important;
+    font-weight: 300;
+    line-height: 1.7;
+}
+
+/* Links */
+a {
+    color: var(--gold-main);
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+    a:hover {
+        color: var(--gold-bright);
+        text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+    }
+
+/* =========================================
+   4. NAVIGATION (BLACK BAR)
+   ========================================= */
+.navbar {
+    background-color: #000000 !important;
+    border-bottom: 1px solid var(--gold-dark);
+    padding: 1rem 0;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.9);
+}
+
+/* Logo Name (Top Left) */
+.navbar-brand, .waliu-logo-text {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.8rem;
+    letter-spacing: 1.5px;
+    background: var(--gold-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--gold-main) !important;
+}
+
+    /* Also make the Logo Icon Gold */
+    .navbar-brand i {
+        background: var(--gold-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: var(--gold-main) !important;
+    }
+
+.nav-link {
+    font-family: 'Inter', sans-serif;
+    color: #999 !important;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+    .nav-link:hover {
+        color: var(--gold-main) !important;
+        transform: translateY(-1px);
+    }
+
+/* =========================================
+   5. CARDS (MATTE BLACK)
+   ========================================= */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+    .card:hover {
+        transform: translateY(-5px);
+        border-color: var(--gold-main);
+        box-shadow: var(--shadow-glow);
+    }
+
+.card-title {
+    color: var(--gold-main);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+}
+
+/* Cinema Branch Header (e.g. Waliu KLCC) */
+.card-header {
+    background-color: #080808 !important;
+    border-bottom: 1px solid #222;
+}
+
+    .card-header h5, .card-header i {
+        color: var(--gold-main) !important;
+        -webkit-text-fill-color: initial; /* Reset gradient for small headers */
+        background: none;
+        font-family: 'Inter', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-size: 1rem;
+    }
+
+.card-body {
+    color: var(--text-white);
+}
+
+/* =========================================
+   6. BUTTONS (METALLIC GOLD)
+   ========================================= */
+.btn {
+    border-radius: var(--radius-md);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0.7rem 1.5rem;
+    transition: all 0.3s;
+}
+
+/* Primary (Book, Pay, Login) */
+.btn-primary {
+    background: var(--gold-gradient);
+    color: #000;
+    border: none;
+}
+
+    .btn-primary:hover {
+        background: var(--gold-bright);
+        color: #000;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+        transform: translateY(-2px);
+    }
+
+/* Secondary (Outline) */
+.btn-outline-dark, .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--gold-dark);
+    color: var(--gold-main);
+}
+
+    .btn-outline-dark:hover, .btn-secondary:hover {
+        background: var(--gold-main);
+        color: #000;
+    }
+
+/* Time Slot Buttons */
+.time-slot {
+    background: var(--bg-input);
+    border: 1px solid #333;
+    color: #fff !important;
+}
+
+    .time-slot:hover {
+        background: var(--gold-main);
+        color: #000 !important;
+        border-color: var(--gold-main);
+    }
+
+/* =========================================
+   7. FORMS (LOGIN / REGISTER)
+   ========================================= */
+.form-control {
+    background-color: var(--bg-input);
+    border: 1px solid #333;
+    color: #fff;
+    padding: 0.8rem;
+}
+
+    .form-control:focus {
+        background-color: #000;
+        border-color: var(--gold-main);
+        color: #fff;
+        box-shadow: 0 0 0 1px var(--gold-main);
+    }
+
+label {
+    color: var(--gold-main);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+/* =========================================
+   8. FOOTER (SLEEK & NON-BLOCKING)
+   ========================================= */
+footer {
+    /* Layout Safety */
+    position: relative !important;
+    z-index: 10;
+    margin-top: auto; /* Pushes to bottom */
+    /* Styling */
+    background-color: #050505 !important;
+    border-top: 1px solid var(--gold-dark);
+    color: #888;
+    padding: 2rem 0 1rem 0;
+    font-size: 0.85rem;
+}
+
+    footer h5 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        color: var(--gold-main);
+    }
+
+.footer-link {
+    color: #777;
+    display: block;
+    margin-bottom: 0.5rem;
+    transition: 0.2s;
+}
+
+    .footer-link:hover {
+        color: var(--gold-main);
+        padding-left: 3px;
+    }
+
+/* Social Buttons */
+.social-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+    border: 1px solid #333;
+    border-radius: 50%;
+    color: var(--gold-main);
+    background: #111;
+    transition: 0.3s;
+}
+
+    .social-btn:hover {
+        background: var(--gold-main);
+        color: #000;
+    }
+
+.social-icons {
+    gap: 10px;
+}
+
+/* =========================================
+   9. HOME PAGE CAROUSEL (SLIDING BANNER)
+   ========================================= */
+
+/* The Image Settings */
+.banner-img {
+    height: 500px; /* Fixed height for the banner */
+    object-fit: cover; /* Ensures image doesn't stretch weirdly */
+    object-position: center;
+    filter: brightness(0.6); /* Darkens image so text is readable */
+}
+
+/* The Text Overlay */
+.carousel-caption {
+    bottom: 20%; /* Moves text up slightly */
+    z-index: 10;
+}
+
+.gold-text-shadow {
+    color: #fff;
+    text-shadow: 0 0 20px rgba(191, 149, 63, 0.8); /* Gold Glow behind text */
+    font-family: 'Playfair Display', serif;
+}
+
+/* Indicators (The dots at the bottom) */
+.carousel-indicators button {
+    background-color: var(--gold-main) !important;
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50%;
+    margin: 0 5px;
+}
+
+/* Custom Dark Dropdown */
+.dropdown-menu-end {
+    background-color: #111 !important;
+    border: 1px solid var(--gold-dark) !important;
+}
+
+.dropdown-item:hover {
+    background-color: var(--gold-main) !important;
+    color: #000 !important;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.hover-gold:hover {
+    color: var(--gold-main) !important;
+    text-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+}
+
+/* Back Button Hover Effect */
+.hover-gold {
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+    .hover-gold:hover {
+        color: #d4af37 !important; /* Your Theme Gold */
+        transform: translateX(-5px); /* Subtle slide left animation */
+    }

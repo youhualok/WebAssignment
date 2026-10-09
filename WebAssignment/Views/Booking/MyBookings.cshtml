@@ -1,0 +1,112 @@
+﻿@model IEnumerable<WebAssignment.Models.Booking>
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("My Bookings");
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">@Lang.Get("My Bookings")</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info text-center py-5">
+            <h4>@Lang.Get("You haven't booked anything yet.")</h4>
+            <p>@Lang.Get("Go ahead and watch a movie or grab some snacks!")</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary mt-2">@Lang.Get("Browse Movies")</a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var item in Model)
+            {
+                <div class="col-md-12 mb-3">
+                    <div class="card shadow-sm border-start border-5 @(item.Showtime != null ? "border-primary" : "border-success")">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+
+                                <div class="col-md-1 col-3 text-center">
+                                    @if (item.Showtime != null)
+                                    {
+                                        <img src="@item.Showtime.Movie.ImageUrl" class="img-fluid rounded" alt="Poster" style="height: 100px; object-fit: cover;">
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 100px;">
+                                            <i class="bi bi-basket2-fill text-success fs-1"></i>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="col-md-7 col-9">
+                                    @if (item.Showtime != null)
+                                    {
+                                        <h5 class="card-title fw-bold">@item.Showtime.Movie.Title</h5>
+                                        <p class="mb-1 text-muted">
+                                            <i class="bi bi-geo-alt-fill"></i> @item.Showtime.Hall.Cinema.Name &bull; @item.Showtime.Hall.Name
+                                        </p>
+                                        <p class="mb-1 text-muted">
+                                            <i class="bi bi-calendar-event"></i> @item.Showtime.StartTime.ToString("f")
+                                        </p>
+                                        <div class="mb-1">
+                                            <strong>@Lang.Get("Seats"):</strong>
+                                            @foreach (var detail in item.BookingDetails)
+                                            {
+                                                <span class="badge bg-secondary me-1">
+                                                    @detail.Seat.Row@detail.Seat.Number
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <h5 class="card-title fw-bold text-success">@Lang.Get("Food & Beverage Order")</h5>
+                                        <p class="mb-1 text-muted">
+                                            <i class="bi bi-calendar-check"></i> @item.BookingDate.ToString("f")
+                                        </p>
+                                        <span class="badge bg-success">@Lang.Get("Snacks Only")</span>
+                                    }
+
+                                    @if (item.BookingSnacks != null && item.BookingSnacks.Any())
+                                    {
+                                        <div class="mt-2 text-muted small">
+                                            <i class="bi bi-cup-straw"></i>
+                                            @foreach (var s in item.BookingSnacks)
+                                            {
+                                                <span>@s.Quantity x @s.Snack.Name@(s == item.BookingSnacks.Last() ? "" : ", ")</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="col-md-4 text-center border-start">
+                                    <h4 class="text-success">RM @item.TotalAmount.ToString("N2")</h4>
+
+                                    <div class="mb-2">
+                                        @if (item.Showtime != null && item.Showtime.StartTime > DateTime.Now)
+                                        {
+                                            <span class="badge bg-primary">@Lang.Get("Upcoming")</span>
+                                        }
+                                        else if (item.Showtime == null)
+                                        {
+                                            <span class="badge bg-success">@Lang.Get("Order Paid")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@Lang.Get("Completed")</span>
+                                        }
+                                    </div>
+
+                                    <a asp-action="BookingSuccess" asp-route-id="@item.BookingId" class="btn btn-outline-dark w-100">
+                                        <i class="bi bi-qr-code"></i> @Lang.Get("View Receipt")
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

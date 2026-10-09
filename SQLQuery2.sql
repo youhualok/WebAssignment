@@ -1,0 +1,7 @@
+﻿BEGIN TRANSACTION;
+
+DELETE FROM dbo.BookingSnacks;
+DELETE FROM dbo.BookingDetails;
+DELETE FROM dbo.Bookings;
+
+COMMIT TRANSACTION;

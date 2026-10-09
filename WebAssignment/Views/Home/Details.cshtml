@@ -1,0 +1,462 @@
+﻿@model WebAssignment.Models.Movie
+
+@{
+    ViewData["Title"] = Model.Title;
+    DateTime selectedDate = ViewBag.SelectedDate ?? DateTime.Today;
+
+    var showtimes = Model.Showtimes ?? new List<WebAssignment.Models.Showtime>();
+
+    // === MODIFIED LOGIC HERE ===
+    // Filter showtimes for the selected date AND ensure time is in the future
+    var todaysShowtimes = showtimes
+        .Where(s => s.StartTime.Date == selectedDate.Date && s.StartTime > DateTime.Now)
+        .OrderBy(s => s.StartTime)
+        .ToList();
+    // ===========================
+
+    var showtimesByCinema = todaysShowtimes.GroupBy(s => s.Hall.Cinema.Name);
+    bool isNowShowing = Model.Status == WebAssignment.Models.MovieStatus.NowShowing;
+}
+
+@* --- HERO SECTION (No Changes) --- *@
+<div class="movie-hero-section" style="background-image: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, #050505 100%), url('@Model.ImageUrl');">
+    <div class="container position-relative z-2">
+        <div class="row align-items-center">
+
+            <div class="col-md-3 mb-4 mb-md-0">
+                <img src="@Model.ImageUrl" class="img-fluid rounded shadow-lg poster-hover"
+                     alt="@Model.Title" style="border: 1px solid #333;">
+            </div>
+
+            <div class="col-md-9 text-white">
+
+                <h1 class="display-3 fw-bold gold-title mb-2">@Model.Title</h1>
+
+                <div class="d-flex align-items-center gap-2 mb-4 text-white-50 flex-wrap">
+                    <span class="badge bg-warning text-dark fw-bold">@Model.Genre</span>
+                    <span>&bull;</span>
+
+                    @if (Model.DurationMinutes > 0)
+                    {
+                        <span><i class="bi bi-clock"></i> @Model.DurationMinutes mins</span>
+                        <span>&bull;</span>
+                    }
+
+                    <span>@Model.ReleaseDate.ToString("dd MMM yyyy")</span>
+                    <span>&bull;</span>
+
+                    @if (isNowShowing)
+                    {
+                        <span class="badge bg-success text-white">NOW SHOWING</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-primary text-white">COMING SOON</span>
+                    }
+                </div>
+
+                <div class="mb-4" style="max-width: 800px;">
+                    <h5 class="text-white fw-bold">Synopsis</h5>
+                    <p class="lead" style="color: #ccc; font-size: 1rem; line-height: 1.7;">
+                        @Model.Description
+                    </p>
+                </div>
+
+                <div class="d-flex gap-3">
+
+                    @if (isNowShowing)
+                    {
+                        <a href="#bookingSection" class="btn btn-primary btn-lg px-4 shadow-lg">
+                            <i class="bi bi-ticket-perforated-fill me-2"></i> Book Tickets
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-secondary btn-lg px-4 disabled" style="cursor: not-allowed; opacity: 0.6;">
+                            <i class="bi bi-lock-fill me-2"></i> Booking Unavailable
+                        </button>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.TrailerUrl))
+                    {
+                        <button type="button" class="btn btn-outline-light btn-lg px-4" data-bs-toggle="modal" data-bs-target="#trailerModal">
+                            <i class="bi bi-play-circle me-2"></i> Watch Trailer
+                        </button>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- SHOWTIMES SECTION --- *@
+@if (isNowShowing)
+{
+    <div class="container mt-5 mb-5" id="bookingSection">
+
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h3 class="gold-title mb-0">Showtimes</h3>
+            <span class="text-muted small">Select a date to view times</span>
+        </div>
+
+        <div class="d-flex overflow-auto pb-3 mb-4 gap-2 date-scroll-container">
+            @for (int i = 0; i < 7; i++)
+            {
+                var date = DateTime.Today.AddDays(i);
+                bool isActive = date.Date == selectedDate.Date;
+
+                <a href="@Url.Action("Details", new { id = Model.MovieId, date = date.ToString("yyyy-MM-dd") })"
+                   class="btn @(isActive ? "btn-warning fw-bold" : "btn-dark text-muted") date-card d-flex flex-column align-items-center justify-content-center">
+                    <span style="font-size: 0.8rem;">@date.ToString("ddd").ToUpper()</span>
+                    <span style="font-size: 1.5rem; font-weight: 700;">@date.ToString("dd")</span>
+                    <span style="font-size: 0.8rem;">@date.ToString("MMM")</span>
+                </a>
+            }
+        </div>
+
+        @if (!showtimesByCinema.Any())
+        {
+            <div class="text-center py-5 rounded" style="border: 1px dashed #333; background: #111;">
+                <i class="bi bi-calendar-x display-4 text-muted mb-3"></i>
+                <h5 class="text-muted">No upcoming showtimes for @selectedDate.ToString("dd MMM").</h5>
+                <p class="text-muted small">Shows that have already started are hidden.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var cinemaGroup in showtimesByCinema)
+            {
+                <div class="card shadow-sm border-0 mb-4" style="background: #111; border: 1px solid #222;">
+                    <div class="card-header pt-3 pb-2 border-0" style="background: #1a1a1a;">
+                        <h5 class="text-white mb-0">
+                            <i class="bi bi-geo-alt-fill text-warning me-2"></i> @cinemaGroup.Key
+                        </h5>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach (var showtime in cinemaGroup)
+                            {
+                                string hallName = showtime.Hall.Name;
+                                string displayType = "Standard 2D";
+
+                                if (hallName.Contains("IMAX")) displayType = "IMAX 3D";
+                                else if (hallName.Contains("Beanie")) displayType = "Beanie";
+                                else if (hallName.Contains("Indulge")) displayType = "Indulge";
+
+                                <a asp-controller="Booking" asp-action="SelectSeats" asp-route-showtimeId="@showtime.ShowtimeId"
+                                   class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center p-2 time-slot-card"
+                                   style="width: 130px; border-color: #333;">
+
+                                    <span class="text-white fw-bold fs-5">@showtime.StartTime.ToString("h:mm tt")</span>
+                                    <small class="text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--gold-main);">
+                                        @displayType
+                                    </small>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+}
+else
+{
+    <div class="container mt-5 mb-5">
+        <div class="p-5 rounded text-center" style="background: #111; border: 1px dashed var(--gold-dark); position: relative; overflow: hidden;">
+
+            <i class="bi bi-hourglass-split" style="position: absolute; top: -20px; right: -20px; font-size: 15rem; opacity: 0.05; color: white;"></i>
+
+            <h2 class="gold-title display-5 mb-3">Coming Soon</h2>
+            <p class="lead text-light mb-4" style="max-width: 600px; margin: 0 auto;">
+                Get ready for the ultimate cinematic experience. <br />
+                <strong>@Model.Title</strong> premieres on:
+            </p>
+
+            <div class="d-inline-block px-5 py-3 rounded mb-4 shadow-lg" style="background: var(--gold-gradient);">
+                <h3 class="text-dark fw-bold mb-0">@Model.ReleaseDate.ToString("dd MMMM yyyy")</h3>
+            </div>
+
+            <p class="text-muted">Tickets will be available for purchase closer to the release date.</p>
+
+            <div class="mt-4">
+                <a asp-action="Index" class="btn btn-outline-light px-4">
+                    <i class="bi bi-arrow-left me-2"></i> Back to Movies
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+@* --- REVIEWS SECTION (No Changes) --- *@
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-12">
+            <h3 class="gold-title border-bottom pb-2 mb-4">
+                User Reviews
+                <span class="text-white fs-5 ms-3">
+                    <i class="bi bi-star-fill text-warning"></i>
+                    @(ViewBag.AverageRating != null ? ViewBag.AverageRating.ToString("0.0") : "0.0")/5
+                    <span class="text-muted small">(@ViewBag.ReviewCount reviews)</span>
+                </span>
+            </h3>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="p-4 rounded" style="background: #111; border: 1px solid #333;">
+                <h5 class="text-white mb-3">Write a Review</h5>
+
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <form asp-action="AddReview" method="post">
+                        <input type="hidden" name="movieId" value="@Model.MovieId" />
+
+                        <div class="mb-3">
+                            <label class="text-white-50 small mb-1">Rating</label>
+                            <div class="rating-css">
+                                <div class="star-icon">
+                                    <input type="radio" name="rating" value="1" id="rating1">
+                                    <label for="rating1" class="bi bi-star-fill"></label>
+
+                                    <input type="radio" name="rating" value="2" id="rating2">
+                                    <label for="rating2" class="bi bi-star-fill"></label>
+
+                                    <input type="radio" name="rating" value="3" id="rating3">
+                                    <label for="rating3" class="bi bi-star-fill"></label>
+
+                                    <input type="radio" name="rating" value="4" id="rating4">
+                                    <label for="rating4" class="bi bi-star-fill"></label>
+
+                                    <input type="radio" name="rating" value="5" id="rating5" checked>
+                                    <label for="rating5" class="bi bi-star-fill"></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-white-50 small mb-1">Your Comment</label>
+                            <textarea name="comment" class="form-control bg-dark text-white border-secondary" rows="4" required placeholder="Share your thoughts..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Submit Review</button>
+                    </form>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-person-lock fs-1 text-muted mb-2"></i>
+                        <p class="text-muted small">Please login to write a review.</p>
+                        <a href="/Account/Login" class="btn btn-outline-warning btn-sm">Login Now</a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            @if (ViewBag.Reviews != null && ((IEnumerable<dynamic>)ViewBag.Reviews).Any())
+            {
+                foreach (var review in ViewBag.Reviews)
+                {
+                    <div class="d-flex mb-4 p-3 rounded" style="background: #0f0f0f; border-left: 3px solid var(--gold-main);">
+                        <div class="me-3">
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="width: 50px; height: 50px;">
+                                @(review.User?.Username?.Substring(0, 1).ToUpper() ?? "U")
+                            </div>
+                        </div>
+
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="text-white mb-0">@review.User?.Username</h6>
+                                <small class="text-muted">@review.CreatedAt.ToString("dd MMM yyyy")</small>
+                            </div>
+
+                            <div class="text-warning mb-2 small">
+                                @for (int i = 0; i < review.Rating; i++)
+                                {
+                                    <i class="bi bi-star-fill"></i>
+                                }
+                                @for (int i = review.Rating; i < 5; i++)
+                                {
+                                    <i class="bi bi-star"></i>
+                                }
+                            </div>
+
+                            <p class="text-white-50 mb-2 small">@review.Comment</p>
+
+                            @if (!string.IsNullOrEmpty(review.Reply))
+                            {
+                                <div class="mt-3 p-3 rounded position-relative" style="background: #1a1a1a; border: 1px solid #333; margin-left: 20px;">
+                                    <div style="position: absolute; top: -10px; left: 20px; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 10px solid #333;"></div>
+
+                                    <h6 class="text-warning small fw-bold mb-1">
+                                        <i class="bi bi-patch-check-fill me-1"></i> Admin Response
+                                    </h6>
+                                    <p class="mb-0 text-white small">@review.Reply</p>
+                                    <small class="text-muted" style="font-size: 0.7rem;">@review.ReplyDate?.ToString("dd MMM yyyy")</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-chat-square-text fs-1 mb-3"></i>
+                    <p>No reviews yet. Be the first to share your thoughts!</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* --- TRAILER MODAL --- *@
+@if (!string.IsNullOrEmpty(Model.TrailerUrl))
+{
+    var embedUrl = Model.TrailerUrl;
+    if (embedUrl.Contains("watch?v="))
+    {
+        embedUrl = embedUrl.Replace("watch?v=", "embed/");
+    }
+    else if (embedUrl.Contains("youtu.be/"))
+    {
+        embedUrl = embedUrl.Replace("youtu.be/", "youtube.com/embed/");
+    }
+
+    <div class="modal fade" id="trailerModal" tabindex="-1" aria-labelledby="trailerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white" id="trailerModalLabel">@Model.Title - Trailer</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="ratio ratio-16x9">
+                        <iframe id="trailerVideo" src="@embedUrl" title="YouTube video" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    /* HERO SECTION */
+    .movie-hero-section {
+        position: relative;
+        background-size: cover;
+        background-position: center top;
+        background-repeat: no-repeat;
+        padding: 100px 0 60px 0;
+        margin-top: -20px;
+        border-bottom: 1px solid var(--gold-dark);
+    }
+
+    /* Make Poster Pop */
+    .poster-hover {
+        transition: transform 0.3s;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;
+    }
+
+        .poster-hover:hover {
+            transform: scale(1.02);
+            border-color: var(--gold-main) !important;
+        }
+
+    /* DATE TABS */
+    .date-scroll-container::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .date-scroll-container::-webkit-scrollbar-thumb {
+        background-color: #333;
+        border-radius: 4px;
+    }
+
+    .date-card {
+        min-width: 90px;
+        height: 100px;
+        border-radius: 10px;
+        border: 1px solid #333;
+        transition: all 0.2s;
+    }
+
+        .date-card:hover {
+            border-color: var(--gold-main);
+            transform: translateY(-2px);
+        }
+
+    /* Active State for Date */
+    .btn-warning.date-card {
+        background: var(--gold-gradient);
+        border: none;
+        color: #000 !important;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    }
+
+    /* TIME SLOTS */
+    .time-slot-card {
+        background: #0f0f0f;
+        transition: 0.2s;
+        height: 80px;
+    }
+
+        .time-slot-card:hover {
+            background: var(--gold-main);
+            border-color: var(--gold-main) !important;
+            transform: translateY(-3px);
+        }
+
+            .time-slot-card:hover span,
+            .time-slot-card:hover small {
+                color: #000 !important;
+            }
+
+    /* STAR RATING SYSTEM CSS */
+    .rating-css div {
+        color: #ffe400;
+        font-size: 20px;
+        font-family: sans-serif;
+        font-weight: 800;
+        text-align: left;
+        text-transform: uppercase;
+        padding: 10px 0;
+    }
+
+    .rating-css input {
+        display: none;
+    }
+
+        .rating-css input + label {
+            font-size: 25px;
+            text-shadow: 1px 1px 0 #8f8420;
+            cursor: pointer;
+        }
+
+        .rating-css input:checked + label ~ label {
+            color: #b4b4b4;
+        }
+
+    .rating-css label:active {
+        transform: scale(0.8);
+        transition: 0.3s all;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var trailerModal = document.getElementById('trailerModal');
+        if (trailerModal) {
+            trailerModal.addEventListener('hidden.bs.modal', function () {
+                var iframe = document.getElementById('trailerVideo');
+                if (iframe) {
+                    var tempSrc = iframe.src;
+                    iframe.src = "";
+                    iframe.src = tempSrc;
+                }
+            });
+        }
+    });
+</script>

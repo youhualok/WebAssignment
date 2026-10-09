@@ -1,0 +1,175 @@
+﻿@model WebAssignment.Models.EditProfileViewModel
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("Edit Profile");
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg" style="background-color: #121212; border: 1px solid var(--gold-dark);">
+                <div class="card-body p-5">
+                    <h3 class="gold-title mb-4 text-center">@Lang.Get("Edit Profile")</h3>
+
+                    @if (ViewBag.Error != null)
+                    {
+                        <div class="alert alert-danger">@ViewBag.Error</div>
+                    }
+
+                    <form asp-action="EditProfile" method="post" enctype="multipart/form-data">
+                        <input type="hidden" asp-for="UserId" />
+                        <input type="hidden" asp-for="Username" />
+                        <input type="hidden" name="base64Image" id="base64Image" />
+
+                        <div class="mb-4 text-center">
+                            <label class="form-label text-warning d-block">@Lang.Get("Profile Photo")</label>
+
+                            @if (!string.IsNullOrEmpty(Model.ProfilePhotoPath))
+                            {
+                                <img id="profilePreview" src="@Model.ProfilePhotoPath" class="rounded-circle mb-3 shadow" style="width: 150px; height: 150px; object-fit: cover; border: 2px solid var(--gold-main);">
+                            }
+                            else
+                            {
+                                <img id="profilePreview" src="https://ui-avatars.com/api/?name=@Model.Username" class="rounded-circle mb-3 shadow" style="width: 150px; height: 150px; object-fit: cover; border: 2px solid var(--gold-main);">
+                            }
+
+                            <div id="cameraArea" class="d-none mb-3">
+                                <video id="videoElement" autoplay playsinline class="w-100 border border-secondary rounded mb-2" style="max-height: 250px; object-fit: cover;"></video>
+                                <button type="button" class="btn btn-danger btn-sm w-100" onclick="takeSnapshot()">
+                                    <i class="bi bi-camera-fill"></i> @Lang.Get("Snap & Edit")
+                                </button>
+                            </div>
+
+                            <input type="file" id="fileInput" name="profileImage" class="form-control bg-dark text-white border-secondary mb-2" accept="image/*" />
+
+                            <button type="button" class="btn btn-outline-warning btn-sm w-100" onclick="toggleCamera()">
+                                <i class="bi bi-webcam"></i> @Lang.Get("Use Webcam")
+                            </button>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-warning">@Lang.Get("Full Name")</label>
+                            <input asp-for="FullName" class="form-control bg-dark text-white border-secondary" required />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-warning">@Lang.Get("Email Address")</label>
+                            <input asp-for="Email" type="email" class="form-control bg-dark text-white border-secondary" required />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-warning">Phone Number (optional)</label>
+                            <input asp-for="PhoneNumber" class="form-control bg-dark text-white border-secondary" placeholder="+60123456789" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning fw-bold">@Lang.Get("Save Changes")</button>
+                            <a asp-action="Profile" class="btn btn-outline-secondary">@Lang.Get("Cancel")</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="cropModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-warning">@Lang.Get("Edit Image")</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center" style="background-color: #000;">
+                <img id="imageToCrop" src="" style="max-width: 100%; display: block;">
+            </div>
+            <div class="modal-footer border-secondary justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary" onclick="rotateImage(-90)"><i class="bi bi-arrow-counterclockwise"></i></button>
+                <button type="button" class="btn btn-secondary" onclick="rotateImage(90)"><i class="bi bi-arrow-clockwise"></i></button>
+                <button type="button" class="btn btn-secondary" onclick="flipImage('h')"><i class="bi bi-arrow-left-right"></i></button>
+                <button type="button" class="btn btn-secondary" onclick="flipImage('v')"><i class="bi bi-arrow-down-up"></i></button>
+                <button type="button" class="btn btn-success fw-bold" onclick="cropAndSave()">@Lang.Get("Done")</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<canvas id="canvasElement" style="display:none;"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+@section Scripts {
+    <script>
+        let videoStream = null;
+        let cropper = null;
+        const imageToCrop = document.getElementById('imageToCrop');
+        const cropModal = new bootstrap.Modal(document.getElementById('cropModal'));
+
+        document.getElementById('fileInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => openCropper(event.target.result);
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function toggleCamera() {
+            const area = document.getElementById('cameraArea');
+            const video = document.getElementById('videoElement');
+            if (area.classList.contains('d-none')) {
+                navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                    area.classList.remove('d-none');
+                });
+            } else {
+                stopCamera();
+            }
+        }
+
+        function stopCamera() {
+            if (videoStream) videoStream.getTracks().forEach(t => t.stop());
+            document.getElementById('cameraArea').classList.add('d-none');
+        }
+
+        function takeSnapshot() {
+            const video = document.getElementById('videoElement');
+            const canvas = document.getElementById('canvasElement');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            stopCamera();
+            openCropper(canvas.toDataURL('image/jpeg'));
+        }
+
+        function openCropper(src) {
+            imageToCrop.src = src;
+            cropModal.show();
+            document.getElementById('cropModal').addEventListener('shown.bs.modal', () => {
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(imageToCrop, { aspectRatio: 1, viewMode: 1 });
+            }, { once: true });
+        }
+
+        function rotateImage(deg) { if(cropper) cropper.rotate(deg); }
+
+        let sX = 1, sY = 1;
+        function flipImage(dir) {
+            if(!cropper) return;
+            if(dir === 'h') { sX *= -1; cropper.scaleX(sX); }
+            else { sY *= -1; cropper.scaleY(sY); }
+        }
+
+        function cropAndSave() {
+            const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
+            const data = canvas.toDataURL('image/jpeg');
+            document.getElementById('base64Image').value = data;
+            document.getElementById('profilePreview').src = data;
+            cropModal.hide();
+        }
+    </script>
+}

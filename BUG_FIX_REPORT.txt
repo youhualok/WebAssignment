@@ -1,0 +1,98 @@
+Cinema Ticketing System - Bug Fix Report
+=========================================
+
+This package is based on CinemaTicketingSystem_FIXED (2).zip.
+
+1. Compile-blocking missing parenthesis
+   Path: WebAssignment/Controllers/BookingController.cs
+   Fix: Corrected BookingDetails.Add(new BookingDetail { ... }); syntax.
+
+2. Duplicate seat purchases at database level
+   Paths:
+   - WebAssignment/Models/CinemaModels.cs
+   - WebAssignment/Models/Data/AppDbContext.cs
+   - WebAssignment/Controllers/BookingController.cs
+   - WebAssignment/Migrations/20260908010000_RepairMissingColumns.cs
+   Fix: Added ShowtimeId to BookingDetail and a unique ShowtimeId + SeatId index.
+
+3. Missing database columns despite an up-to-date EF snapshot
+   Path: WebAssignment/Migrations/20260908010000_RepairMissingColumns.cs
+   Fix: Added an executable repair migration for Users.PhoneNumber and
+   BookingDetails.ShowtimeId, including the seat uniqueness index and foreign key.
+
+4. Invalid or oversized duplicated snack quantities
+   Path: WebAssignment/Controllers/BookingController.cs
+   Fix: Revalidates quantities after duplicate cart lines are grouped.
+
+5. Untrusted snack customization
+   Path: WebAssignment/Controllers/BookingController.cs
+   Fix: Normalizes customization to the supported options before pricing and storage.
+
+6. CSRF protection gaps
+   Paths:
+   - WebAssignment/Controllers/BookingController.cs
+   - WebAssignment/Controllers/SeatsController.cs
+   - WebAssignment/Views/Booking/PaymentPage.cshtml
+   - WebAssignment/Views/Booking/SnackCheckout.cshtml
+   - WebAssignment/Views/Seats/Manage.cshtml
+   Fix: Added validation attributes and tokens to form/AJAX requests.
+
+7. Fake image-extension upload bypass
+   Path: WebAssignment/Controllers/AccountController.cs
+   Fix: Checks size, allowed extension and JPG/PNG/WEBP file signatures.
+
+8. Invalid webcam Base64 crash/content bypass
+   Paths:
+   - WebAssignment/Controllers/AccountController.cs
+   - WebAssignment/Views/Account/EditProfile.cshtml
+   Fix: Handles invalid Base64, enforces 5 MB, and verifies JPEG signature.
+
+9. SMS configuration existed but SMS was only written to a text file
+   Paths:
+   - WebAssignment/Helpers/SmsService.cs
+   - WebAssignment/Controllers/HomeController.cs
+   - WebAssignment/Models/CinemaModels.cs
+   - WebAssignment/Models/RegisterViewModel.cs
+   - WebAssignment/Models/EditProfileViewModel.cs
+   - WebAssignment/Views/Account/Register.cshtml
+   - WebAssignment/Views/Account/EditProfile.cshtml
+   - WebAssignment/Migrations/20260908010000_RepairMissingColumns.cs
+   Fix: Added optional E.164 phone number and real Twilio sending for reminders.
+
+10. Sensitive credentials stored in the project
+    Paths:
+    - WebAssignment/appsettings.json
+    - WebAssignment/WebAssignment.csproj
+    Fix: Removed credentials from the package and enabled ASP.NET User Secrets.
+
+11. Unused SMS dependency in AccountController
+    Path: WebAssignment/Controllers/AccountController.cs
+   Fix: Removed the unused constructor dependency while retaining SMS in HomeController.
+
+12. Theme selection returned HTTP 400
+    Paths:
+    - WebAssignment/Views/Account/_ThemeCard.cshtml
+    - WebAssignment/Views/Account/Settings.cshtml
+    - WebAssignment/Controllers/AccountController.cs
+    Fix: Added an explicit anti-forgery token, aligned the five allowed theme names,
+    repaired the card markup and removed the obsolete duplicate form generator.
+
+Required setup after extraction
+===============================
+
+1. Open WebAssignment.sln in Visual Studio 2022.
+2. Right-click the WebAssignment project and select Manage User Secrets.
+3. Add EmailSettings and SmsSettings credentials to secrets.json.
+4. Open Package Manager Console and run: Update-Database
+5. Select Build > Rebuild Solution.
+6. Run through HTTPS.
+
+Notes
+=====
+
+- Payment remains a classroom simulation. It validates input but does not charge a bank.
+- Twilio Trial accounts may only send to verified recipient numbers.
+- Phone numbers must use international E.164 format, such as +60123456789.
+- Treat appsettings.json as confidential if personal email or SMS credentials are present.
+- Static inspection was completed, but the current analysis environment does not contain
+  the .NET SDK. Visual Studio Rebuild and runtime testing are therefore still required.

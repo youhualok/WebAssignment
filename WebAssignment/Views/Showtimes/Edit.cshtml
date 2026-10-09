@@ -1,0 +1,48 @@
+﻿@model WebAssignment.Models.Showtime
+
+@{
+    ViewData["Title"] = "Edit Showtime";
+}
+
+<h1 class="text-white">Edit Showtime</h1>
+
+<h4 class="text-muted">Showtime</h4>
+<hr class="border-secondary" />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Edit">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="ShowtimeId" />
+
+            <div class="form-group mb-3">
+                <label asp-for="MovieId" class="control-label text-white"></label>
+                <select asp-for="MovieId" class="form-control bg-dark text-white border-secondary" asp-items="ViewBag.MovieId"></select>
+                <span asp-validation-for="MovieId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="HallId" class="control-label text-white"></label>
+                <select asp-for="HallId" class="form-control bg-dark text-white border-secondary" asp-items="ViewBag.HallId"></select>
+                <small class="text-muted">* Changing Hall will auto-update Ticket Price.</small>
+                <span asp-validation-for="HallId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="StartTime" class="control-label text-white"></label>
+                <input asp-for="StartTime" class="form-control bg-dark text-white border-secondary" />
+                <span asp-validation-for="StartTime" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-4">
+                <input type="submit" value="Save" class="btn btn-warning" />
+                <a asp-action="Index" class="btn btn-secondary ms-2">Back to List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

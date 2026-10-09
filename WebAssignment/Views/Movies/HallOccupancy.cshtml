@@ -1,0 +1,354 @@
+﻿@model List<WebAssignment.Models.HallStatusViewModel>
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("Hall Status");
+    // --- [UPDATED] FILTERING LOGIC ---
+    // Exclude shows where TrendingStatus is "Ended"
+    var upcomingShows = Model.Where(h => h.TrendingStatus != "Ended").ToList();
+    var activeHalls = upcomingShows.Where(h => h.Percentage > 0).OrderBy(h => h.Time).ToList();
+    var emptyHalls = upcomingShows.Where(h => h.Percentage == 0).OrderBy(h => h.Time).ToList();
+}
+
+<style>
+    /* --- ANIMATIONS & EFFECTS --- */
+    .progress-bar {
+        transition: width 1s ease-in-out;
+    }
+
+    .card-hover {
+        transition: all 0.3s ease;
+        position: relative;
+        border: 1px solid rgba(255,255,255,0.1);
+        z-index: 1;
+    }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3) !important;
+            border-color: #d4af37 !important;
+            z-index: 100 !important;
+        }
+
+    .poster-bg {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-size: cover;
+        background-position: center;
+        opacity: 0.15;
+        z-index: 0;
+        filter: blur(2px) grayscale(50%);
+        transition: opacity 0.3s;
+        border-radius: var(--bs-card-border-radius);
+    }
+
+    .card-hover:hover .poster-bg {
+        opacity: 0.25;
+        filter: blur(0px) grayscale(20%);
+    }
+
+    .card-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .action-btn-container {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+    }
+
+    .btn-glass {
+        background: rgba(0,0,0,0.6);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+        .btn-glass:hover {
+            background: #ffc107;
+            color: black;
+            transform: scale(1.1);
+        }
+
+    @("@keyframes") pulse-red {
+        0%
+
+    {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 5px rgba(220, 53, 69, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+
+    }
+
+    .badge-hot {
+        animation: pulse-red 2s infinite;
+        background: linear-gradient(45deg, #ff3547, #ff6b6b);
+    }
+
+    .form-switch .form-check-input {
+        width: 3em;
+        height: 1.5em;
+        cursor: pointer;
+    }
+
+    .dropdown-menu-dark {
+        background-color: #212529;
+        border: 1px solid #495057;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    }
+</style>
+
+<div class="container mt-4">
+
+    @* --- HEADER & CONTROLS --- *@
+    <div class="card bg-dark border-secondary mb-4 shadow-sm">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h2 class="text-warning mb-0"><i class="bi bi-grid-3x3-gap-fill"></i> @Lang.Get("Hall Occupancy")</h2>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="text-muted small">@Lang.Get("Live view of upcoming showtimes.")</span>
+                    <div class="vr mx-2 bg-secondary"></div>
+                    <div class="form-check form-switch d-flex align-items-center">
+                        <input class="form-check-input bg-warning border-0" type="checkbox"
+                               id="autoRefreshToggle">
+                        <label class="form-check-label text-white small ms-2" for="autoRefreshToggle">
+                            <i class="bi bi-broadcast text-danger"></i> Live Mode (10s)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <form method="get" asp-action="HallOccupancy" class="d-flex flex-wrap gap-2">
+                @if (ViewBag.IsSuperAdmin == true)
+                {
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-secondary text-white border-secondary"><i class="bi bi-geo-alt-fill"></i></span>
+                        <select name="branchId" class="form-select bg-dark text-white border-secondary"
+                                asp-items="ViewBag.BranchList" onchange="this.form.submit()" style="min-width: 160px;"></select>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" name="branchId" value="@Context.Request.Query["branchId"]" />
+                }
+
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-secondary text-white border-secondary"><i class="bi bi-film"></i></span>
+                    <select name="movieId" class="form-select bg-dark text-white border-secondary"
+                            asp-items="ViewBag.MovieList" onchange="this.form.submit()" style="min-width: 200px;"></select>
+                </div>
+
+                <a asp-action="HallOccupancy" class="btn btn-sm btn-outline-secondary" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </form>
+        </div>
+    </div>
+
+    @* ========================================= *@
+    @* SECTION 1: ACTIVE / OCCUPIED HALLS        *@
+    @* ========================================= *@
+    @if (activeHalls.Any())
+    {
+        <h4 class="text-white mb-3 d-flex align-items-center">
+            <i class="bi bi-fire text-danger me-2"></i> @Lang.Get("Occupied & Active Halls")
+            <span class="badge bg-transparent text-warning border border-warning ms-2 rounded-pill fs-5 shadow px-3">
+                @activeHalls.Count
+            </span>
+        </h4>
+        <div class="row g-3 mb-5">
+            @foreach (var hall in activeHalls)
+            {
+                await RenderHallCard(hall);
+            }
+        </div>
+    }
+
+    @* ========================================= *@
+    @* SECTION 2: EMPTY / UPCOMING HALLS         *@
+    @* ========================================= *@
+    @if (emptyHalls.Any())
+    {
+        <h4 class="text-white-50 mb-3 d-flex align-items-center border-top border-secondary pt-4">
+            <i class="bi bi-hourglass-split me-2"></i> @Lang.Get("Empty / Upcoming")
+            <span class="badge bg-transparent text-info border border-info ms-2 rounded-pill fs-5 shadow px-3">
+                @emptyHalls.Count
+            </span>
+        </h4>
+        <div class="row g-3">
+            @foreach (var hall in emptyHalls)
+            {
+                await RenderHallCard(hall);
+            }
+        </div>
+    }
+
+    @* ========================================= *@
+    @* EMPTY STATE (If no shows or all ended)    *@
+    @* ========================================= *@
+    @if (!activeHalls.Any() && !emptyHalls.Any())
+    {
+        <div class="col-12 text-center py-5">
+            <div class="p-5 rounded border border-secondary border-dashed" style="background: rgba(255,255,255,0.05);">
+                <i class="bi bi-search display-4 text-muted mb-3"></i>
+                <h5 class="text-white-50">No upcoming screenings found.</h5>
+                <p class="text-muted small">All shows for today may have ended or check your filters.</p>
+                @if (ViewBag.IsSuperAdmin == true)
+                {
+                    <a asp-action="Create" asp-controller="Showtimes" class="btn btn-warning mt-2">
+                        <i class="bi bi-plus-circle"></i> Create Showtime
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+</div>
+
+@* --- HELPER FUNCTION TO RENDER CARD --- *@
+@{
+    async Task RenderHallCard(WebAssignment.Models.HallStatusViewModel hall)
+    {
+        // Color Logic
+        string progressClass = "bg-warning";
+        string borderClass = "border-secondary";
+
+        if (hall.Percentage > 85)
+        {
+            progressClass = "bg-danger";
+            borderClass = "border-danger";
+        }
+        else if (hall.Percentage > 50)
+        {
+            progressClass = "bg-success";
+            borderClass = "border-success";
+        }
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card bg-dark @borderClass shadow h-100 card-hover">
+
+                @* Poster Background *@
+                <div class="poster-bg" style="background-image: url('@hall.MovieImageUrl');"></div>
+
+                @* Action Menu *@
+                <div class="action-btn-container dropdown">
+                    <button class="btn btn-sm btn-glass rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical small"></i>
+                    </button>
+
+                    <ul class="dropdown-menu dropdown-menu-dark shadow-lg">
+                        <li>
+                            <a class="dropdown-item" asp-action="GuestManifest" asp-route-showtimeId="@hall.ShowtimeId">
+                                <i class="bi bi-people me-2 text-primary"></i> View Guest List
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider border-secondary"></li>
+                        <li>
+                            <a class="dropdown-item" asp-action="ExportManifest" asp-route-showtimeId="@hall.ShowtimeId">
+                                <i class="bi bi-file-earmark-spreadsheet text-success me-2"></i> Export Excel
+                            </a>
+                        </li>
+                        @* EDIT OPTION REMOVED FROM HERE *@
+                    </ul>
+                </div>
+
+                @* Card Body *@
+                <div class="card-body card-content d-flex flex-column pt-4">
+
+                    @* Hall Name *@
+                    <div class="d-flex justify-content-between align-items-start mb-2 pe-4">
+                        <span class="badge bg-warning text-dark fw-bold shadow-sm">@hall.HallName</span>
+                    </div>
+
+                    @* Time & Status *@
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-black border border-secondary text-white-50">@hall.Time</span>
+                        @if (hall.TrendingStatus == "Hot")
+                        {
+                            <span class="badge badge-hot text-white">🔥 FAST</span>
+                        }
+                        else if (hall.TrendingStatus == "Cold")
+                        {
+
+                            <span class="badge bg-info text-dark">❄️ COLD</span>
+                        }
+                    </div>
+
+                    @* Title & Revenue *@
+                    <div class="mb-3 flex-grow-1">
+                        <h5 class="text-white fw-bold mb-1 text-truncate" title="@hall.MovieTitle" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+                            @hall.MovieTitle
+                        </h5>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">
+                                RM @hall.CurrentRevenue.ToString("N2")
+                            </span>
+                        </div>
+                    </div>
+
+                    @* Stats Footer *@
+                    <div class="d-flex justify-content-between text-white-50 small mb-1 fw-bold">
+                        <span><i class="bi bi-person-fill me-1"></i> @hall.Sold / @hall.Capacity</span>
+                        <span class="@(hall.Percentage > 85 ? "text-danger" : (hall.Percentage > 50 ? "text-success" : "text-warning"))">
+                            @hall.Percentage.ToString("0")%
+                        </span>
+                    </div>
+
+                    @* Progress Bar *@
+                    <div class="progress shadow-sm" style="height: 12px; background-color: rgba(255,255,255,0.1); border-radius: 6px;">
+                        <div class="progress-bar @progressClass" role="progressbar"
+                             style="width: @hall.Percentage.ToString("0")%"
+                             aria-valuenow="@hall.Percentage" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@* --- SCRIPT: AUTO REFRESH --- *@
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggle = document.getElementById('autoRefreshToggle');
+        let refreshInterval;
+
+        if (localStorage.getItem('autoRefresh') === 'true') {
+            toggle.checked = true;
+            startRefresh();
+        }
+
+        toggle.addEventListener('change', function() {
+            localStorage.setItem('autoRefresh', this.checked);
+            if (this.checked) {
+                startRefresh();
+            } else {
+                clearInterval(refreshInterval);
+            }
+        });
+
+        function startRefresh() {
+            refreshInterval = setInterval(() => {
+                window.location.reload();
+            }, 10000);
+        }
+    });
+</script>

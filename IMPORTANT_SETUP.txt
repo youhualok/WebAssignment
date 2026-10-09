@@ -1,0 +1,24 @@
+Cinema Ticketing System - Fixed Version
+
+1. Open WebAssignment.sln in Visual Studio 2022.
+2. Open WebAssignment/appsettings.json.
+3. Enter your own SQL Server connection string.
+4. Keep email and SMS secrets outside the project by using User Secrets:
+   Right-click WebAssignment > Manage User Secrets.
+5. In Package Manager Console run:
+   Update-Database
+6. Build > Rebuild Solution.
+7. Run the project using HTTPS.
+
+New database demo accounts:
+- Super Admin: admin / DemoAdmin!2026
+- Customer: user / DemoUser!2026
+- Branch Admins: admin_klcc, admin_mv or admin_ou / BranchAdmin!2026
+
+Important:
+- Do not run Add-Migration. The required RepairMissingColumns migration is already included.
+- If you used an older copy, run Update-Database once before opening the login page.
+- The payment screen is a classroom simulation. It validates input but does not charge a real bank card.
+- Replace all credentials that were present in the earlier ZIP because they may already be exposed.
+- If Update-Database reports duplicate username/email/seat/promo data, remove those duplicates first.
+- Test two browsers selecting the same seat; the second request should now be rejected.

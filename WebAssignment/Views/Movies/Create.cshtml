@@ -1,0 +1,120 @@
+﻿@using System.Globalization
+@inject WebAssignment.Helpers.LanguageService Lang
+@model WebAssignment.Models.Movie
+
+@{
+    ViewData["Title"] = Lang.Get("Create Movie");
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card bg-dark border-warning shadow-lg">
+                <div class="card-header bg-black border-bottom border-warning">
+                    <h4 class="gold-title mb-0">@Lang.Get("Add New Movie")</h4>
+                </div>
+                <div class="card-body p-4">
+
+                    <form asp-action="Create">
+                        <div asp-validation-summary="All" class="alert alert-danger" style="display:none;"></div>
+
+                        <h5 class="text-white border-bottom border-secondary pb-2 mb-3">@Lang.Get("Movie Details")</h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Movie Title")</label>
+                                <input asp-for="Title" class="form-control bg-black text-white border-secondary" placeholder="@Lang.Get("e.g. Iron Man")" />
+                                <span asp-validation-for="Title" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Genre")</label>
+                                <input asp-for="Genre" class="form-control bg-black text-white border-secondary" placeholder="@Lang.Get("e.g. Action/Sci-Fi")" />
+                                <span asp-validation-for="Genre" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Duration (Minutes)")</label>
+                                <input asp-for="DurationMinutes" type="number" class="form-control bg-black text-white border-secondary" placeholder="@Lang.Get("e.g. 120")" />
+                                <span asp-validation-for="DurationMinutes" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Base Price (RM)")</label>
+                                <input asp-for="Price" type="number" step="0.01" class="form-control bg-black text-white border-secondary" placeholder="@Lang.Get("e.g. 20.00")" />
+                                <span asp-validation-for="Price" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Release Date")</label>
+                                <input asp-for="ReleaseDate" type="date" class="form-control bg-black text-white border-secondary" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Status")</label>
+                                <select asp-for="Status" class="form-select bg-black text-white border-secondary">
+                                    <option value="0">@Lang.Get("Now Showing")</option>
+                                    <option value="1">@Lang.Get("Coming Soon")</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Poster URL")</label>
+                            <input asp-for="ImageUrl" class="form-control bg-black text-white border-secondary" placeholder="https://..." />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Trailer URL")</label>
+                            <input asp-for="TrailerUrl" class="form-control bg-black text-white border-secondary" placeholder="https://youtube.com/..." />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="text-warning small text-uppercase fw-bold">@Lang.Get("Description")</label>
+                            <textarea asp-for="Description" class="form-control bg-black text-white border-secondary" rows="3"></textarea>
+                        </div>
+
+                        <div class="bg-black p-3 border border-warning rounded mb-4">
+                            <h5 class="text-warning border-bottom border-secondary pb-2 mb-3">
+                                <i class="bi bi-calendar-check me-2"></i>@Lang.Get("Quick Scheduler")
+                            </h5>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="autoSchedule" name="AutoSchedule" value="true">
+                                <label class="form-check-label text-white" for="autoSchedule">
+                                    @Lang.Get("Auto-generate showtimes for the next 7 days?")
+                                </label>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="text-muted small">@Lang.Get("Shows Per Day (Per Cinema)")</label>
+                                    <select name="ShowsPerDay" class="form-select bg-dark text-white border-secondary">
+                                        <option value="3">@Lang.Get("3 Shows (Light)")</option>
+                                        <option value="5" selected>@Lang.Get("5 Shows (Standard)")</option>
+                                        <option value="8">@Lang.Get("8 Shows (Heavy)")</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small">@Lang.Get("Target Branch")</label>
+                                    <select name="TargetBranch" class="form-select bg-dark text-white border-secondary">
+                                        <option value="All">@Lang.Get("All Branches")</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <small class="text-muted fst-italic mt-2 d-block">
+                                * @Lang.Get("This will randomly assign halls (IMAX/Standard) and set prices automatically.")
+                            </small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning fw-bold">@Lang.Get("Create Movie & Schedule")</button>
+                            <a asp-action="Index" class="btn btn-outline-light">@Lang.Get("Cancel")</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

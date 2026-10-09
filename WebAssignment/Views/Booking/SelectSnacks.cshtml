@@ -1,0 +1,473 @@
+﻿@model List<WebAssignment.Models.Snack>
+@using System.Globalization
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("Snacks Menu"); // Matches "Snacks Menu" in dictionary
+    var showtimeId = ViewBag.ShowtimeId ?? 0;
+    var selectedSeatIds = (ViewBag.SelectedSeatIds as List<int>) ?? new List<int>();
+    var snackList = Model ?? new List<WebAssignment.Models.Snack>();
+}
+
+<div class="container mt-4 mb-4 text-center">
+    <h2 class="gold-title" style="letter-spacing: 2px;">@Lang.Get("Indulge Yourself")</h2>
+    <p class="text-muted">@Lang.Get("Order your favorite snacks directly (No ticket required)")</p>
+</div>
+
+<div class="container mb-5 pb-5">
+    <form asp-action="SnackCheckout" method="post" id="mainSnackForm" autocomplete="off">
+        <input type="hidden" name="showtimeId" value="@showtimeId" />
+        @foreach (var seatId in selectedSeatIds)
+        {
+            <input type="hidden" name="selectedSeatIds" value="@seatId" />
+        }
+
+        <div id="cart-inputs-container"></div>
+
+        <div class="row g-4">
+            @foreach (var snack in snackList)
+            {
+                var name = (snack.Name ?? "").ToLower();
+                string snackType = "other";
+
+                // Determine Type for Modal Logic
+                if (name.Contains("popcorn") || name.Contains("corn"))
+                {
+                    snackType = "popcorn";
+                }
+                // Includes COLA fix
+                else if (name.Contains("coke") || name.Contains("sprite") || name.Contains("tea") || name.Contains("water") || name.Contains("drink") || name.Contains("cola") || name.Contains("100plus"))
+                {
+                    snackType = "drink";
+                }
+
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card h-100 border-0 shadow-lg snack-card overflow-hidden position-relative">
+
+                        <div id="badge-@snack.SnackId" class="qty-badge d-none">0</div>
+
+                        <div class="img-wrapper">
+                            <img src="@snack.ImageUrl" class="card-img-top" alt="@snack.Name" onerror="this.src='https://via.placeholder.com/300x200'">
+                        </div>
+                        <div class="card-body text-center p-3 d-flex flex-column">
+                            <h6 class="card-title text-white fw-bold mb-1">@snack.Name</h6>
+                            <p class="text-warning fw-bold mb-3 small">RM @snack.Price.ToString("N2")</p>
+
+                            <div class="mt-auto">
+                                <button type="button" class="btn btn-warning rounded-pill w-100 fw-bold btn-sm shadow-sm"
+                                        onclick="openSnackModal(this)"
+                                        data-id="@snack.SnackId"
+                                        data-name="@snack.Name"
+                                        data-price="@snack.Price"
+                                        data-type="@snackType"
+                                        data-img="@snack.ImageUrl">
+                                    <i class="bi bi-plus-lg me-1"></i> @Lang.Get("ADD")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="fixed-bottom bg-black border-top border-secondary py-3 px-4 shadow-lg" style="z-index: 100;">
+            <div class="container d-flex justify-content-between align-items-center">
+
+                <a href="javascript:history.back()" class="btn-glass-back">
+                    <i class="bi bi-arrow-left"></i> @Lang.Get("Back to Menu")
+                </a>
+
+                <div>
+                    <small class="text-muted d-block text-end" style="font-size:0.75rem">@Lang.Get("Total Payable")</small>
+                    <h4 class="gold-title mb-0" id="grandTotalDisplay">RM 0.00</h4>
+                </div>
+
+                <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-warning" id="btnCheckout">
+                    @Lang.Get("Checkout") <i class="bi bi-chevron-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal fade" id="snackModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark text-white border-secondary">
+
+            <div class="position-relative">
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 shadow-sm" style="z-index:10;" data-bs-dismiss="modal" aria-label="Close"></button>
+                <img id="modalImg" src="" class="w-100" style="height: 150px; object-fit: cover; opacity: 0.8;">
+                <div class="position-absolute bottom-0 start-0 p-3" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); width: 100%;">
+                    <h4 class="modal-title fw-bold" id="modalSnackName">Snack Name</h4>
+                    <span class="text-warning" id="modalBasePrice">RM 0.00</span>
+                </div>
+            </div>
+
+            <div class="modal-body p-4">
+                <input type="hidden" id="currentModalSnackId">
+                <input type="hidden" id="currentModalBasePriceFloat">
+
+                <div class="d-flex justify-content-between align-items-center mb-4 p-3 rounded bg-black border border-secondary">
+                    <span class="fw-bold">@Lang.Get("Quantity")</span>
+                    <div class="d-flex align-items-center gap-3 bg-dark rounded-pill p-1 border border-secondary">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle border-0" onclick="modalUpdateQty(-1)"><i class="bi bi-dash-lg"></i></button>
+                        <span id="modalQtyDisplay" class="fw-bold fs-5 mx-2">1</span>
+                        <button type="button" class="btn btn-sm btn-warning rounded-circle border-0" onclick="modalUpdateQty(1)"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                </div>
+
+                <hr class="border-secondary">
+
+                <h6 class="fw-bold text-muted mb-3">@Lang.Get("Customization")</h6>
+
+                <div class="mb-4">
+                    <label class="form-label small text-muted mb-2"><i class="bi bi-arrows-angle-expand me-1"></i>@Lang.Get("Size Preference")</label>
+                    <div class="d-flex gap-2">
+                        <input type="radio" class="btn-check option-trigger" name="modal-size" id="size-regular" value="Regular" checked>
+                        <label class="btn btn-outline-secondary flex-grow-1 rounded-3 text-start ps-3 py-2" for="size-regular">
+                            @Lang.Get("Regular") <span class="float-end text-muted small">@Lang.Get("Free")</span>
+                        </label>
+
+                        <input type="radio" class="btn-check option-trigger" name="modal-size" id="size-large" value="Large">
+                        <label class="btn btn-outline-secondary flex-grow-1 rounded-3 text-start ps-3 py-2" for="size-large">
+                            @Lang.Get("Large") <span class="float-end text-warning small">+RM2.00</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="modal-section-popcorn" class="cust-section d-none mb-4">
+                    <label class="form-label small text-muted mb-2"><i class="bi bi-stars me-1"></i>@Lang.Get("Select Flavor")</label>
+                    <div class="d-flex flex-column gap-2">
+
+                        <input type="radio" class="btn-check option-trigger" name="modal-flavor" id="flavor-classic" value="Classic" checked>
+                        <label class="btn btn-outline-secondary rounded-3 text-start ps-3 py-2" for="flavor-classic">
+                            @Lang.Get("Classic Popcorn") <span class="float-end text-muted small">@Lang.Get("Free")</span>
+                        </label>
+
+                        <input type="radio" class="btn-check option-trigger" name="modal-flavor" id="flavor-butter" value="Butter">
+                        <label class="btn btn-outline-secondary rounded-3 text-start ps-3 py-2" for="flavor-butter">
+                            @Lang.Get("Butter Popcorn") <span class="float-end text-muted small">@Lang.Get("Free")</span>
+                        </label>
+
+                        <input type="radio" class="btn-check option-trigger" name="modal-flavor" id="flavor-royale" value="Royale">
+                        <label class="btn btn-outline-secondary rounded-3 text-start ps-3 py-2" for="flavor-royale">
+                            @Lang.Get("Royale Popcorn") <span class="float-end text-warning small">+RM3.00</span>
+                        </label>
+
+                    </div>
+                </div>
+
+                <div id="modal-section-drink" class="cust-section d-none mb-4">
+                    <label class="form-label small text-muted mb-2"><i class="bi bi-cup-straw me-1"></i>@Lang.Get("Temperature")</label>
+                    <div>
+                        <input type="checkbox" class="btn-check option-trigger" id="addon-noice" value="No Ice">
+                        <label class="btn btn-outline-secondary w-100 rounded-3 text-start ps-3 py-2" for="addon-noice">
+                            @Lang.Get("No Ice") <span class="float-end text-muted small">@Lang.Get("Free")</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top border-secondary p-3 bg-black">
+                <div class="w-100">
+                    <button type="button" class="btn btn-warning rounded-pill w-100 py-3 fw-bold shadow-sm d-flex justify-content-between px-4" onclick="confirmModalAddItem()">
+                        <span>@Lang.Get("Add to Cart")</span>
+                        <span id="modalTotalPrice">RM 0.00</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #000;
+        padding-bottom: 80px;
+    }
+
+    .gold-title {
+        color: #d4af37;
+    }
+
+    .snack-card {
+        background: #121212;
+        transition: transform 0.2s;
+        border: 1px solid #333;
+    }
+
+        .snack-card:hover {
+            transform: translateY(-5px);
+            border-color: #d4af37;
+        }
+
+    .img-wrapper {
+        height: 140px;
+        background: #000;
+        overflow: hidden;
+    }
+
+        .img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.9;
+        }
+
+    .qty-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: var(--bs-danger);
+        color: white;
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8rem;
+        z-index: 2;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+
+    .btn-close-white {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    .btn-check:checked + .btn-outline-secondary {
+        background-color: rgba(212, 175, 55, 0.15);
+        border-color: #d4af37;
+        color: #d4af37;
+    }
+
+    .btn-outline-secondary {
+        border-color: #333;
+        color: #ccc;
+    }
+
+        .btn-outline-secondary:hover {
+            background-color: #1a1a1a;
+            border-color: #555;
+            color: white;
+        }
+
+    .fixed-bottom {
+        background: rgba(10, 10, 10, 0.95) !important;
+        backdrop-filter: blur(10px);
+    }
+
+    .shadow-warning {
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+    }
+
+    /* === GLASS BACK BUTTON STYLE === */
+    .btn-glass-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #b0b0b0;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.95rem;
+        padding: 8px 24px;
+        border-radius: 50px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.05);
+        transition: all 0.3s ease;
+    }
+
+        .btn-glass-back:hover {
+            color: #fff;
+            border-color: #d4af37;
+            background: rgba(212, 175, 55, 0.1);
+            transform: translateX(-5px);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+</style>
+
+<script>
+    let snackModal;
+    let currentModalQty = 1;
+    // Cart array to support multiple items of same ID with different customizations
+    let cart = [];
+
+    document.addEventListener("DOMContentLoaded", function() {
+        snackModal = new bootstrap.Modal(document.getElementById('snackModal'));
+        document.querySelectorAll('.option-trigger').forEach(item => {
+            item.addEventListener('change', calculateModalTotal);
+        });
+
+        // Ensure UI is clean on load/back-navigation
+        updateCartDisplay();
+    });
+
+    // Safety check for back button navigation
+    window.addEventListener("pageshow", function(event) {
+        if (event.persisted || (window.performance && window.performance.navigation.type == 2)) {
+            updateCartDisplay();
+        }
+    });
+
+    function openSnackModal(button) {
+        const id = button.getAttribute('data-id');
+        const name = button.getAttribute('data-name');
+        const price = parseFloat(button.getAttribute('data-price'));
+        const type = button.getAttribute('data-type');
+        const img = button.getAttribute('data-img');
+
+        document.getElementById('currentModalSnackId').value = id;
+        document.getElementById('currentModalBasePriceFloat').value = price;
+        document.getElementById('modalSnackName').innerText = name;
+        // Removed "Base: " prefix for cleaner translation
+        document.getElementById('modalBasePrice').innerText = "RM " + price.toFixed(2);
+        document.getElementById('modalImg').src = img;
+
+        // Reset Qty to 1 every time modal opens (adding NEW item)
+        currentModalQty = 1;
+        document.getElementById('modalQtyDisplay').innerText = currentModalQty;
+
+        // Reset Options to defaults
+        document.getElementById('size-regular').checked = true;
+        document.getElementById('flavor-classic').checked = true;
+        document.getElementById('addon-noice').checked = false;
+
+        // Show/Hide Sections based on Type
+        document.querySelectorAll('.cust-section').forEach(el => el.classList.add('d-none'));
+
+        if (type === 'popcorn') {
+            document.getElementById('modal-section-popcorn').classList.remove('d-none');
+        } else if (type === 'drink') {
+            document.getElementById('modal-section-drink').classList.remove('d-none');
+        }
+
+        calculateModalTotal();
+        snackModal.show();
+    }
+
+    function modalUpdateQty(change) {
+        currentModalQty += change;
+        if (currentModalQty < 1) currentModalQty = 1;
+        document.getElementById('modalQtyDisplay').innerText = currentModalQty;
+        calculateModalTotal();
+    }
+
+    function calculateModalTotal() {
+        const basePrice = parseFloat(document.getElementById('currentModalBasePriceFloat').value);
+        let extras = 0;
+
+        // Size Cost
+        if (document.getElementById('size-large').checked) extras += 2.00;
+
+        // Popcorn Flavor Cost
+        if (document.getElementById('flavor-royale').checked && !document.getElementById('modal-section-popcorn').classList.contains('d-none')) {
+            extras += 3.00;
+        }
+
+        const total = (basePrice + extras) * currentModalQty;
+        document.getElementById('modalTotalPrice').innerText = "RM " + total.toFixed(2);
+    }
+
+    function confirmModalAddItem() {
+        const snackId = document.getElementById('currentModalSnackId').value;
+        const basePrice = parseFloat(document.getElementById('currentModalBasePriceFloat').value);
+
+        // Build Customization String & Calculate Unit Price
+        let custString = "";
+        let priceExtras = 0;
+
+        // Size
+        if (document.getElementById('size-regular').checked) custString += "Regular";
+        if (document.getElementById('size-large').checked) {
+            custString += "Large";
+            priceExtras += 2.00;
+        }
+
+        // Popcorn Flavors
+        if (!document.getElementById('modal-section-popcorn').classList.contains('d-none')) {
+            if (document.getElementById('flavor-classic').checked) custString += ", Classic";
+            if (document.getElementById('flavor-butter').checked) custString += ", Butter";
+            if (document.getElementById('flavor-royale').checked) {
+                custString += ", Royale";
+                priceExtras += 3.00;
+            }
+        }
+
+        // Drinks
+        if (!document.getElementById('modal-section-drink').classList.contains('d-none')) {
+            if (document.getElementById('addon-noice').checked) custString += ", No Ice";
+        }
+
+        // Add to Cart List
+        cart.push({
+            snackId: snackId,
+            quantity: currentModalQty,
+            customization: custString,
+            unitPrice: basePrice + priceExtras
+        });
+
+        // Refresh UI
+        updateCartDisplay();
+        snackModal.hide();
+    }
+
+    function updateCartDisplay() {
+        let grandTotal = 0;
+
+        // 1. Reset all badges to 0/hidden
+        document.querySelectorAll('.qty-badge').forEach(b => {
+            b.innerText = "0";
+            b.classList.add('d-none');
+        });
+
+        // 2. Loop cart to calculate totals and update specific ID badges
+        cart.forEach(item => {
+            grandTotal += (item.unitPrice * item.quantity);
+
+            // Update Badge for this Snack ID (summing if multiple entries exist)
+            const badge = document.getElementById('badge-' + item.snackId);
+            if (badge) {
+                let currentCount = parseInt(badge.innerText);
+                badge.innerText = currentCount + item.quantity;
+                badge.classList.remove('d-none');
+            }
+        });
+
+        document.getElementById('grandTotalDisplay').innerText = "RM " + grandTotal.toFixed(2);
+
+        // 3. GENERATE HIDDEN INPUTS FOR FORM SUBMISSION
+        // Matches Controller: List<SnackCartItem> cartItems
+        const container = document.getElementById('cart-inputs-container');
+        container.innerHTML = ""; // Clear old inputs
+
+        cart.forEach((item, index) => {
+            // input: cartItems[0].SnackId
+            let inputId = document.createElement("input");
+            inputId.type = "hidden";
+            inputId.name = `cartItems[${index}].SnackId`;
+            inputId.value = item.snackId;
+            container.appendChild(inputId);
+
+            // input: cartItems[0].Quantity
+            let inputQty = document.createElement("input");
+            inputQty.type = "hidden";
+            inputQty.name = `cartItems[${index}].Quantity`;
+            inputQty.value = item.quantity;
+            container.appendChild(inputQty);
+
+            // input: cartItems[0].Customization
+            let inputCust = document.createElement("input");
+            inputCust.type = "hidden";
+            inputCust.name = `cartItems[${index}].Customization`;
+            inputCust.value = item.customization;
+            container.appendChild(inputCust);
+        });
+    }
+</script>

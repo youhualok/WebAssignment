@@ -1,0 +1,130 @@
+﻿@{
+    ViewData["Title"] = "Verify Account";
+}
+
+<style>
+    body {
+        background-color: #000;
+        color: white;
+    }
+
+    .otp-input {
+        width: 50px;
+        height: 60px;
+        font-size: 24px;
+        text-align: center;
+        background-color: #222;
+        border: 2px solid #d4af37;
+        color: white;
+        border-radius: 8px;
+    }
+
+        .otp-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px #d4af37;
+            background-color: #1a1a1a;
+        }
+</style>
+
+<div class="container text-center mt-5" style="max-width: 500px;">
+
+    <h2 style="color: #d4af37;">VERIFY EMAIL</h2>
+    <p class="mb-4">Enter the code sent to your email to activate your account.</p>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger">@ViewBag.Error</div>
+    }
+
+    <form asp-action="VerifyRegister" method="post" id="otpForm">
+        <input type="hidden" name="code" id="finalCode" />
+
+        <div class="d-flex justify-content-center gap-2 mb-4">
+            <input type="text" class="otp-input" maxlength="1" oninput="moveNext(this, 'otp2')" id="otp1" autocomplete="off">
+            <input type="text" class="otp-input" maxlength="1" oninput="moveNext(this, 'otp3')" id="otp2" autocomplete="off">
+            <input type="text" class="otp-input" maxlength="1" oninput="moveNext(this, 'otp4')" id="otp3" autocomplete="off">
+            <input type="text" class="otp-input" maxlength="1" oninput="moveNext(this, 'otp5')" id="otp4" autocomplete="off">
+            <input type="text" class="otp-input" maxlength="1" oninput="moveNext(this, 'otp6')" id="otp5" autocomplete="off">
+            <input type="text" class="otp-input" maxlength="1" oninput="moveNext(this, 'submitBtn')" id="otp6" autocomplete="off">
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-warning w-100 fw-bold mb-3" onclick="combine()">
+            ACTIVATE ACCOUNT
+        </button>
+    </form>
+
+    <hr style="border-top:1px solid #333;" />
+
+    <div class="mt-3">
+        <p id="timer-text" class="text-white-50">Resend code in: <span id="countdown" style="color:#d4af37; font-weight:bold;">30</span>s</p>
+
+        <button id="resendBtn" class="btn btn-secondary btn-sm" onclick="resendOTP()" disabled>
+            Resend Code
+        </button>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // --- 1. OTP Box Movement Logic ---
+    function moveNext(current, nextId) {
+        if (current.value.length >= 1 && nextId) {
+            // Ensure only number is entered (optional, but good)
+            current.value = current.value.replace(/[^0-9]/g, '');
+            if(nextId !== 'submitBtn') {
+                document.getElementById(nextId).focus();
+            } else {
+                document.getElementById('submitBtn').focus();
+            }
+        }
+    }
+
+    function combine() {
+        let code = "";
+        for (let i = 1; i <= 6; i++) code += document.getElementById('otp' + i).value;
+        document.getElementById('finalCode').value = code;
+    }
+
+    // --- 2. Timer & Resend Logic ---
+    let timeLeft = 30; // 30 Seconds Limit
+    const countdownElem = document.getElementById("countdown");
+    const resendBtn = document.getElementById("resendBtn");
+    const timerText = document.getElementById("timer-text");
+
+    // Start Timer
+    const timer = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            countdownElem.innerHTML = "0";
+            timerText.style.display = "none"; // Hide text
+
+            // Enable Button
+            resendBtn.disabled = false;
+            resendBtn.classList.remove("btn-secondary");
+            resendBtn.classList.add("btn-outline-warning");
+            resendBtn.innerHTML = "Resend Code Now";
+        } else {
+            countdownElem.innerHTML = timeLeft;
+        }
+        timeLeft -= 1;
+    }, 1000);
+
+    // Handle Resend Click
+    function resendOTP() {
+        // Disable button while sending to prevent double clicks
+        resendBtn.disabled = true;
+        resendBtn.innerHTML = "Sending...";
+
+        $.post('/Account/ResendRegisterCode', function (response) {
+            if (response.success) {
+                alert("New code sent! Check your email.");
+                location.reload(); // Reloads page to restart the 30s timer
+            } else {
+                alert("Error: " + response.message);
+                if(response.message.includes("expired")) {
+                    window.location.href = "/Account/Register"; // Redirect if session dead
+                }
+            }
+        });
+    }
+</script>

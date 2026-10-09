@@ -1,0 +1,321 @@
+﻿@model WebAssignment.Models.AdminDashboardViewModel
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("Admin Dashboard");
+}
+
+<style>
+    @("@keyframes") blink {
+        0%
+
+    {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+
+    }
+
+    .blink-dot {
+        animation: blink 1.5s infinite;
+        display: inline-block;
+        margin-right: 5px;
+        color: #0f0; /* Bright Green */
+        text-shadow: 0 0 5px #0f0;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-warning"><i class="bi bi-speedometer2"></i> @Lang.Get("EXECUTIVE DASHBOARD")</h2>
+        <span class="badge bg-secondary">@Lang.Get("Live Data")</span>
+    </div>
+
+    @* --- TOP STATS ROW --- *@
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white h-100 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted text-uppercase">@Lang.Get("Total Revenue (Month)")</h6>
+                    <h2 class="text-warning fw-bold">RM @Model.MonthlyRevenue.ToString("N2")</h2>
+                    <small class="text-white-50"><i class="bi bi-calendar-month"></i> @DateTime.Now.ToString("MMMM")</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white h-100 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted text-uppercase">@Lang.Get("Ticket Sales (Month)")</h6>
+                    <h2 class="text-info fw-bold">RM @Model.MonthlyTicketSales.ToString("N2")</h2>
+                    <small class="text-white-50"><i class="bi bi-ticket-perforated"></i> @Lang.Get("Net Sales")</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white h-100 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted text-uppercase">@Lang.Get("Snack Sales (Month)")</h6>
+                    <h2 class="text-success fw-bold">RM @Model.MonthlySnackSales.ToString("N2")</h2>
+                    <small class="text-white-50"><i class="bi bi-cup-straw"></i> @Lang.Get("Food & Beverage")</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white h-100 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted text-uppercase">@Lang.Get("Total Transactions")</h6>
+                    <h2 class="text-primary fw-bold">@Model.MonthlyTransactions</h2>
+                    <small class="text-white-50"><i class="bi bi-receipt"></i> @Lang.Get("Orders this month")</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* --- MAIN CHART & LIVE FEED ROW --- *@
+    <div class="row mb-5">
+        <div class="col-md-8">
+            <div class="card bg-dark border-secondary shadow h-100">
+                <div class="card-header border-secondary text-white fw-bold d-flex flex-wrap justify-content-between align-items-center">
+                    <span><i class="bi bi-graph-up"></i> @Lang.Get("Sales Trend (Last 7 Days)")</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <form method="get" asp-action="Dashboard" class="d-inline-block m-0">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-secondary text-white border-secondary"><i class="bi bi-filter"></i></span>
+                                @if (ViewBag.IsSuperAdmin == true)
+                                {
+                                    <select name="branchId" class="form-select form-select-sm bg-dark text-white border-secondary" asp-items="ViewBag.BranchList" onchange="this.form.submit()" style="max-width: 140px;"></select>
+                                }
+                                else
+                                {
+                                    <div class="input-group-text bg-dark text-white border-secondary fw-bold"><i class="bi bi-geo-alt-fill me-2 text-warning"></i> @ViewBag.CurrentBranchName</div>
+                                    <input type="hidden" name="branchId" value="@Context.Request.Query["branchId"]" />
+                                }
+                                <select name="movieId" class="form-select form-select-sm bg-dark text-white border-secondary" asp-items="ViewBag.MovieList" onchange="this.form.submit()" style="max-width: 180px;"></select>
+                            </div>
+                        </form>
+                        <a asp-action="ExportReport" asp-route-branchId="@Context.Request.Query["branchId"]" asp-route-movieId="@Context.Request.Query["movieId"]" class="btn btn-success btn-sm fw-bold" title="@Lang.Get("Download full history as CSV")">
+                            <i class="bi bi-cloud-download me-1"></i> CSV
+                        </a>
+                        @if (ViewBag.IsSuperAdmin == false)
+                        {
+                            <form asp-action="SendMonthlyReport" method="post" class="d-inline">
+                                <input type="hidden" name="branchId" value="@Context.Request.Query["branchId"]" />
+                                <input type="hidden" name="movieId" value="@Context.Request.Query["movieId"]" />
+                                <button type="submit" class="btn btn-primary btn-sm fw-bold" onclick="return confirm('@Lang.Get("Generate and email the monthly report to Super Admin?")');">
+                                    <i class="bi bi-envelope-paper-fill me-1"></i> @Lang.Get("Send Report")
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="bookingChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary shadow h-100">
+                <div class="card-header border-secondary text-white fw-bold d-flex justify-content-between">
+                    <span><i class="bi bi-broadcast"></i> @Lang.Get("Live Operations")</span>
+                    <span id="liveIndicator" class="text-success fw-bold small">
+                        <span class="blink-dot">●</span> @Lang.Get("Online")
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <ul id="liveOrderList" class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                        @if (Model.RecentBookings != null && Model.RecentBookings.Any())
+                        {
+                            @foreach (var item in Model.RecentBookings)
+                            {
+                                <li class="list-group-item bg-dark text-white border-secondary">
+                                    <div class="d-flex justify-content-between">
+                                        @if (item.Showtime != null && item.Showtime.Movie != null)
+                                        {
+                                            <span class="fw-bold text-warning">@item.Showtime.Movie.Title</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="fw-bold text-info">@Lang.Get("Snack Order")</span>
+                                        }
+                                        <small class="text-muted">@item.BookingDate.ToString("HH:mm")</small>
+                                    </div>
+                                    <div class="d-flex justify-content-between small text-white-50 mt-1">
+                                        <span><i class="bi bi-person-fill"></i> @(item.User?.Username ?? "Guest")</span>
+                                        <span class="text-success fw-bold">RM @item.TotalAmount.ToString("N2")</span>
+                                    </div>
+                                    <div class="small text-secondary mt-1">
+                                        <i class="bi bi-geo-alt"></i> @(item.Showtime?.Hall?.Cinema?.Name ?? Lang.Get("Online Store"))
+                                    </div>
+                                </li>
+                            }
+                        }
+                        else
+                        {
+                            <li class="list-group-item bg-dark text-muted text-center py-4">@Lang.Get("No recent activity.")</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* --- MOVIE LISTS ROW --- *@
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card bg-dark border-secondary shadow">
+                <div class="card-header border-secondary text-white fw-bold bg-secondary bg-opacity-25">
+                    @Lang.Get("Now Showing") (@(Model.NowShowing?.Count ?? 0))
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 300px;">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>@Lang.Get("Title")</th>
+                                    <th>@Lang.Get("Genre")</th>
+                                    <th>@Lang.Get("Release Date")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.NowShowing != null)
+                                {
+                                    @foreach (var m in Model.NowShowing)
+                                    {
+                                        <tr>
+                                            <td class="text-warning">@m.Title</td>
+                                            <td>@m.Genre</td>
+                                            <td>@m.ReleaseDate.ToString("dd MMM yyyy")</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card bg-dark border-secondary shadow">
+                <div class="card-header border-secondary text-white fw-bold bg-secondary bg-opacity-25">
+                    @Lang.Get("Coming Soon") (@(Model.ComingSoon?.Count ?? 0))
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 300px;">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>@Lang.Get("Title")</th>
+                                    <th>@Lang.Get("Genre")</th>
+                                    <th>@Lang.Get("Status")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.ComingSoon != null)
+                                {
+                                    @foreach (var m in Model.ComingSoon)
+                                    {
+                                        <tr>
+                                            <td class="text-info">@m.Title</td>
+                                            <td>@m.Genre</td>
+                                            <td><span class="badge bg-secondary">@Lang.Get("Upcoming")</span></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+@section Scripts {
+    <script>
+        var ctx = document.getElementById('bookingChart').getContext('2d');
+        var bookingChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.ChartLabels ?? new string[0])),
+                datasets: [{
+                    label: '@Lang.Get("Daily Revenue / Sales")',
+                    data: @Html.Raw(Json.Serialize(Model.ChartValues ?? new int[0])),
+                    borderColor: '#d4af37',
+                    backgroundColor: 'rgba(212, 175, 55, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#fff' } },
+                    x: { grid: { color: '#333' }, ticks: { color: '#fff' } }
+                },
+                plugins: { legend: { labels: { color: 'white' } } }
+            }
+        });
+
+        var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+
+        connection.on("ReceiveOrderUpdate", function (bookingId, movieTitle, branchName, userName, amount, time, userId) {
+            console.log("New Order Received!");
+
+            const Toast = Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 4000,
+                background: '#d4af37', color: '#000'
+            });
+
+            Toast.fire({
+                icon: 'success',
+                title: movieTitle,
+                text: `${userName} | RM ${amount} | ${branchName}`
+            });
+
+            var newItem = `
+                <li class="list-group-item bg-dark text-white border-secondary animate__animated animate__fadeInLeft" style="border-left: 5px solid #d4af37;">
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold text-warning">${movieTitle}</span>
+                        <small class="text-muted">${time}</small>
+                    </div>
+                    <div class="d-flex justify-content-between small text-white-50 mt-1">
+                        <span><i class="bi bi-person-fill"></i> ${userName}</span>
+                        <span class="text-success fw-bold">RM ${amount}</span>
+                    </div>
+                    <div class="small text-secondary mt-1">
+                        <i class="bi bi-geo-alt"></i> ${branchName}
+                    </div>
+                </li>
+            `;
+            var list = document.getElementById("liveOrderList");
+            if(list) list.insertAdjacentHTML('afterbegin', newItem);
+
+            var badge = document.getElementById("liveIndicator");
+            if(badge) {
+                badge.classList.remove("text-success");
+                badge.classList.add("text-warning");
+                setTimeout(() => {
+                    badge.classList.remove("text-warning");
+                    badge.classList.add("text-success");
+                }, 1000);
+            }
+        });
+
+        connection.start().catch(function (err) {
+            return console.error(err.toString());
+        });
+    </script>
+}

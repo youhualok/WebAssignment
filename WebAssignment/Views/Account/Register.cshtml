@@ -1,0 +1,217 @@
+﻿@model WebAssignment.Models.RegisterViewModel
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = "Register";
+}
+
+<style>
+    body {
+        background-color: #000;
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .register-card {
+        background-color: #121212;
+        border: 1px solid #333;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+        max-width: 500px;
+        margin: 50px auto;
+    }
+
+    .custom-input-group {
+        position: relative;
+        margin-bottom: 25px;
+    }
+
+    .form-control {
+        background-color: #1a1a1a !important;
+        color: white !important;
+        border: 1px solid #444;
+        height: 55px;
+        padding-left: 45px;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+        .form-control:focus {
+            border-color: #d4af37 !important;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            background-color: #222 !important;
+        }
+
+        .form-control::placeholder {
+            color: #666 !important;
+            font-size: 0.9rem;
+        }
+
+    .input-icon {
+        position: absolute;
+        top: 18px;
+        left: 15px;
+        color: #d4af37;
+        font-size: 1.2rem;
+        z-index: 10;
+    }
+
+    input:-webkit-autofill {
+        -webkit-text-fill-color: white !important;
+        -webkit-box-shadow: 0 0 0 50px #1a1a1a inset !important;
+    }
+
+    .input-hint {
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 5px;
+        display: block;
+        margin-left: 5px;
+    }
+
+        .input-hint i {
+            color: #d4af37;
+            margin-right: 5px;
+        }
+
+    .btn-gold-glow {
+        background-image: linear-gradient(to right, #d4af37 0%, #f2d06b 51%, #d4af37 100%);
+        margin-top: 10px;
+        padding: 15px;
+        text-align: center;
+        text-transform: uppercase;
+        transition: 0.5s;
+        background-size: 200% auto;
+        color: black;
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        border-radius: 50px;
+        border: none;
+        font-weight: 900;
+        letter-spacing: 2px;
+        font-size: 1.1rem;
+        width: 100%;
+        cursor: pointer;
+    }
+
+        .btn-gold-glow:hover {
+            background-position: right center;
+            color: #000;
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+        }
+
+    .link-gold {
+        color: #d4af37;
+        text-decoration: none;
+        font-weight: bold;
+        transition: color 0.3s;
+    }
+
+        .link-gold:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+    .text-danger {
+        font-size: 0.85rem;
+        margin-top: 3px;
+        display: block;
+    }
+</style>
+
+<div class="container">
+    <div class="register-card">
+        <a asp-controller="Home" asp-action="Index" class="text-white-50 text-decoration-none d-inline-flex align-items-center mb-4 hover-gold">
+            <i class="bi bi-arrow-left me-2"></i> @Lang.Get("Back to Home")
+        </a>
+        <div class="text-center mb-4">
+            <i class="bi bi-person-plus-fill display-4" style="color: #d4af37;"></i>
+            <h2 class="mt-2" style="color: #d4af37; letter-spacing: 1px;">@Lang.Get("Create Account")</h2>
+            <p class="text-muted">@Lang.Get("Join the Waliu Cinema Club today.")</p>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success">@TempData["Success"]</div>
+        }
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger">@ViewBag.Error</div>
+        }
+
+        <form asp-action="RegisterSubmit" method="post" autocomplete="off">
+
+            <div class="custom-input-group">
+                <i class="bi bi-person-vcard-fill input-icon"></i>
+                <input asp-for="FullName" class="form-control" placeholder="@Lang.Get("Full Name")" />
+                <span class="input-hint">@Lang.Get("Enter your real name as per ID.")</span>
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-person-fill input-icon"></i>
+                <input asp-for="Username" class="form-control" placeholder="@Lang.Get("Username")" />
+                <span class="input-hint">@Lang.Get("Unique nickname for login.")</span>
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-envelope-fill input-icon"></i>
+                <input asp-for="Email" class="form-control" placeholder="@Lang.Get("Email Address")" />
+                <span class="input-hint">@Lang.Get("We will send a verification code here.")</span>
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-phone-fill input-icon"></i>
+                <input asp-for="PhoneNumber" class="form-control" placeholder="Phone number (optional), e.g. +60123456789" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-lock-fill input-icon"></i>
+                <input asp-for="Password" type="password" class="form-control" placeholder="@Lang.Get("Password")" />
+                <span class="input-hint">
+                    <i class="bi bi-info-circle"></i> @Lang.Get("Min 6 chars, 1 number, 1 symbol (@$!%*?&)")
+                </span>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-check-circle-fill input-icon"></i>
+                <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="@Lang.Get("Confirm Password")" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <div class="custom-input-group">
+                <i class="bi bi-shield-lock-fill input-icon"></i>
+                <input name="captchaAnswer" type="number" class="form-control" placeholder="@Lang.Get("Security Question"): @ViewBag.CaptchaQuestion" required />
+                <span class="input-hint">
+                    <i class="bi bi-calculator"></i> @Lang.Get("Please solve the math to prove you are human.")
+                </span>
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState["Captcha"] != null && ViewData.ModelState["Captcha"].Errors.Count > 0)
+                {
+                    <span class="text-danger">@ViewData.ModelState["Captcha"].Errors[0].ErrorMessage</span>
+                }
+            </div>
+
+            <button type="submit" class="btn-gold-glow">
+                @Lang.Get("Sign Up")
+            </button>
+
+        </form>
+
+        <div class="mt-4 text-center">
+            <span class="text-muted">@Lang.Get("Already have an account?")</span>
+            <a asp-action="Login" class="link-gold ms-1">@Lang.Get("Login")</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

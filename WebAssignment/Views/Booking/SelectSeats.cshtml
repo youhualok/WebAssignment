@@ -1,0 +1,524 @@
+﻿@model WebAssignment.Models.Showtime
+@inject WebAssignment.Helpers.LanguageService Lang
+
+@{
+    ViewData["Title"] = Lang.Get("Select Seats");
+    var bookedSeatIds = ViewBag.BookedSeatIds as List<int> ?? new List<int>();
+
+    // 1. Base Ticket Price
+    decimal ticketPrice = Model.TicketPrice;
+    var day = Model.StartTime.DayOfWeek;
+    if (day == DayOfWeek.Friday || day == DayOfWeek.Saturday || day == DayOfWeek.Sunday)
+    {
+        ticketPrice += 3.00m;
+    }
+
+    // 2. Twin Seat Price: (Standard Price * 2) + RM 4 Surcharge
+    decimal twinPrice = (ticketPrice * 2) + 4;
+}
+
+<div class="container mt-4 mb-4">
+    <a asp-controller="Home" asp-action="Details" asp-route-id="@Model.MovieId" class="text-white-50 text-decoration-none d-inline-flex align-items-center mb-3 hover-gold">
+        <i class="bi bi-arrow-left me-2"></i> @Lang.Get("Back to Movie")
+    </a>
+    <div class="d-flex align-items-center gap-3">
+        <img src="@Model.Movie.ImageUrl" class="rounded shadow-sm" style="width: 60px; height: 90px; object-fit: cover;">
+        <div>
+            <h3 class="gold-title mb-0">@Model.Movie.Title</h3>
+            <p class="text-muted mb-0">
+                @Model.Hall.Cinema.Name &bull; @Model.Hall.Name &bull;
+                <span class="text-white">@Model.StartTime.ToString("dd MMM (ddd) h:mm tt")</span>
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="container d-flex justify-content-center">
+    <div class="seat-map-container p-5 rounded shadow-lg" style="background: #101010; border: 1px solid #333; width: 100%; max-width: 900px;">
+
+        <div class="screen-container mb-5 text-center">
+            <div class="cinema-screen"></div>
+            <small class="text-muted mt-2 d-block">SCREEN</small>
+        </div>
+
+        <form asp-action="SelectSnacks" method="post" id="seatForm">
+            <input type="hidden" name="showtimeId" value="@Model.ShowtimeId" />
+
+            <div class="d-flex flex-column align-items-center gap-4">
+                @foreach (var rowGroup in Model.Hall.Seats.GroupBy(s => s.Row))
+                {
+                    // Special Logic for Row E (Twin Row)
+                    var seatsInRow = rowGroup.OrderBy(s => s.Number).ToList();
+                    if (rowGroup.Key == "E")
+                    {
+                        seatsInRow = seatsInRow.Take(4).ToList();
+                    }
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="row-label text-muted fw-bold" style="width: 20px;">@rowGroup.Key</span>
+
+                        @foreach (var seat in seatsInRow)
+                        {
+                            bool isBooked = bookedSeatIds.Contains(seat.SeatId);
+                            bool isTwin = seat.Row == "E";
+                            bool isDamaged = !seat.IsAvailable;
+
+                            <div class="seat-wrapper">
+                                <input type="checkbox" id="seat-@seat.SeatId" name="selectedSeatIds" value="@seat.SeatId"
+                                       class="seat-checkbox" @(isBooked || isDamaged ? "disabled" : "")
+                                       data-price="@(isTwin? twinPrice : ticketPrice)"
+                                       data-label="@seat.Row@seat.Number"
+                                       onchange="updateSummary()" />
+
+                                <label for="seat-@seat.SeatId" class="seat-visual @(isBooked ? "sold" : (isDamaged ? "damaged" : "")) @(isTwin ? "twin" : "")">
+
+                                    <span class="seat-headrest"></span>
+
+                                    <span class="seat-content">
+                                        @if (isDamaged)
+                                        {
+                                            <i class="bi bi-x-lg text-danger"></i>
+                                        }
+                                        else
+                                        {
+                                            @seat.Number
+                                        }
+                                    </span>
+
+                                    @if (!isDamaged)
+                                    {
+                                        <span class="seat-tick">
+                                            @if (isTwin)
+                                            {
+                                                <div class="d-flex justify-content-around w-100">
+                                                    <i class="bi bi-check-lg"></i>
+                                                    <i class="bi bi-check-lg"></i>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-check-lg"></i>
+                                            }
+                                        </span>
+                                    }
+                                </label>
+                            </div>
+                        }
+                        <span class="row-label text-muted fw-bold" style="width: 20px;">@rowGroup.Key</span>
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex justify-content-center gap-4 mt-5 flex-wrap">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="legend-box available">
+                        <span class="seat-headrest-legend"></span>
+                    </div> <span class="text-muted small">@Lang.Get("Available")</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="legend-box twin-legend">
+                        <span class="seat-headrest-legend"></span>
+                    </div> <span class="text-muted small">@Lang.Get("Twin Seat")</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="legend-box selected position-relative">
+                        <span class="seat-headrest-legend"></span>
+                        <span style="position:absolute; top:-18px; left:2px;">🎅</span>
+                        <i class="bi bi-check-lg text-black" style="font-size: 10px; position:relative; z-index:2;"></i>
+                    </div>
+                    <span class="text-muted small">@Lang.Get("Selected")</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="legend-box sold position-relative">
+                        <span class="seat-headrest-legend"></span>
+                        <span style="position:absolute; top:-10px; left:2px;">🎅</span>
+                    </div>
+                    <span class="text-muted small">@Lang.Get("Sold")</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="legend-box damaged">
+                        <span class="seat-headrest-legend"></span>
+                        <i class="bi bi-x-lg text-danger" style="font-size: 10px; z-index: 5;"></i>
+                    </div>
+                    <span class="text-muted small">@Lang.Get("Blocked")</span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="fixed-bottom bg-black border-top border-secondary py-3" style="z-index: 100;">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <span class="text-muted small">@Lang.Get("Selected Seats"):</span>
+            <h5 class="text-white mb-0" id="selectedSeatsText">-</h5>
+        </div>
+
+        <div class="text-center">
+            <span class="text-muted small">Time Remaining:</span>
+            <h4 class="text-danger mb-0 fw-bold" id="countdownTimer">00:40</h4>
+        </div>
+        <div class="text-end me-4">
+            <span class="text-muted small">@Lang.Get("Total"):</span>
+            <h4 class="gold-title mb-0" id="totalPriceText">RM 0.00</h4>
+        </div>
+
+        <button type="button" class="btn btn-primary px-5 fw-bold" onclick="document.getElementById('seatForm').submit()" id="btnCheckout" disabled>
+            @Lang.Get("Continue")
+        </button>
+    </div>
+</div>
+
+<style>
+    .screen-container {
+        perspective: 400px;
+    }
+
+    .cinema-screen {
+        height: 15px;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 20px 50px rgba(255, 255, 255, 0.4);
+        transform: rotateX(-5deg) translateY(-10px);
+        opacity: 0.8;
+    }
+
+    .seat-checkbox {
+        display: none;
+    }
+
+    .seat-visual {
+        width: 40px;
+        height: 35px;
+        border-radius: 0 0 6px 6px;
+        background-color: #333;
+        border: 1px solid #555;
+        border-top: none;
+        border-bottom: 3px solid #222;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        position: relative;
+        margin-top: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .seat-headrest {
+        position: absolute;
+        top: -10px;
+        left: -1px;
+        right: -1px;
+        height: 12px;
+        background-color: #333;
+        border: 1px solid #555;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        z-index: 1;
+        transition: all 0.2s;
+    }
+
+    .seat-visual.twin {
+        width: 86px;
+        background: linear-gradient(90deg, #3e4a5c 42px, #2a3340 42px, #2a3340 44px, #3e4a5c 44px);
+        border-color: #4e5d72;
+    }
+
+        .seat-visual.twin .seat-headrest {
+            background: linear-gradient(90deg, #3e4a5c 42px, #2a3340 42px, #2a3340 44px, #3e4a5c 44px);
+            border-color: #4e5d72;
+        }
+
+    .seat-visual:hover {
+        border-color: var(--gold-main);
+        transform: translateY(-2px);
+    }
+
+        .seat-visual:hover .seat-headrest {
+            border-color: var(--gold-main);
+        }
+
+    .seat-visual.twin:hover {
+        background: linear-gradient(90deg, #4e5d72 42px, #3a4555 42px, #3a4555 44px, #4e5d72 44px);
+        border-color: var(--gold-main);
+    }
+
+        .seat-visual.twin:hover .seat-headrest {
+            background: linear-gradient(90deg, #4e5d72 42px, #3a4555 42px, #3a4555 44px, #4e5d72 44px);
+            border-color: var(--gold-main);
+        }
+
+    .seat-visual::after, .seat-visual::before {
+        content: '';
+        position: absolute;
+        bottom: 2px;
+        width: 4px;
+        height: 24px;
+        background-color: #222;
+        border-radius: 2px;
+        z-index: 3;
+    }
+
+    .seat-visual::before {
+        left: -3px;
+    }
+
+    .seat-visual::after {
+        right: -3px;
+    }
+
+    .seat-content {
+        font-size: 0.7rem;
+        color: #aaa;
+        font-weight: 600;
+        z-index: 5;
+        position: relative;
+        margin-top: -2px;
+    }
+
+    .seat-tick {
+        display: none;
+        color: #000;
+        font-size: 1.2rem;
+        font-weight: bold;
+        z-index: 5;
+        width: 100%;
+        text-align: center;
+    }
+
+    .seat-checkbox:checked + .seat-visual {
+        background: var(--gold-main) !important;
+        border-color: #ffd700;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+    }
+
+        .seat-checkbox:checked + .seat-visual .seat-headrest {
+            background: var(--gold-main) !important;
+            border-color: #ffd700;
+        }
+
+        .seat-checkbox:checked + .seat-visual .seat-content {
+            visibility: hidden;
+        }
+
+        .seat-checkbox:checked + .seat-visual .seat-tick {
+            display: block;
+        }
+
+            /* Christmas Hats */
+            .seat-checkbox:checked + .seat-visual .seat-tick::before,
+            .seat-visual.sold .seat-content::before {
+                content: "🎅";
+                position: absolute;
+                top: -38px;
+                left: 50%;
+                transform: translateX(-50%) rotate(-10deg);
+                font-size: 24px;
+                filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+            }
+
+        .seat-checkbox:checked + .seat-visual.twin .seat-tick::after,
+        .seat-visual.sold.twin .seat-content::after {
+            content: "🎅";
+            position: absolute;
+            top: -38px;
+            left: 10px;
+            transform: rotate(-15deg);
+            font-size: 24px;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
+
+        .seat-checkbox:checked + .seat-visual.twin .seat-tick::before,
+        .seat-visual.sold.twin .seat-content::before {
+            left: auto;
+            right: 10px;
+            transform: rotate(5deg);
+        }
+
+    .seat-visual.sold .seat-content {
+        visibility: visible;
+    }
+
+        .seat-visual.sold .seat-content span {
+            opacity: 0;
+        }
+
+    .seat-visual.sold, .seat-visual.sold .seat-headrest {
+        background: #1a1a1a !important;
+        border-color: #333;
+        cursor: not-allowed;
+    }
+
+    /* === DAMAGED / BLOCKED SEAT === */
+    .seat-visual.damaged,
+    .seat-visual.damaged.twin {
+        background: #2c0b0e !important; /* Solid dark red, NO gradient */
+        border-color: #5c1e23 !important;
+        cursor: not-allowed !important;
+        box-shadow: none !important;
+        pointer-events: none !important; /* 100% prevents clicking */
+    }
+
+        .seat-visual.damaged .seat-headrest,
+        .seat-visual.damaged.twin .seat-headrest {
+            background: #2c0b0e !important;
+            border-color: #5c1e23 !important;
+        }
+
+        /* Remove hover effects completely */
+        .seat-visual.damaged:hover,
+        .seat-visual.damaged.twin:hover {
+            background: #2c0b0e !important;
+            transform: none !important;
+            border-color: #5c1e23 !important;
+        }
+
+        /* Ensure the X icon is visible */
+        .seat-visual.damaged .seat-content {
+            visibility: visible !important;
+            opacity: 0.7;
+            color: red;
+        }
+
+    .legend-box {
+        width: 25px;
+        height: 25px;
+        border-radius: 0 0 6px 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin-top: 8px;
+    }
+
+        .legend-box .seat-headrest-legend {
+            position: absolute;
+            top: -6px;
+            left: -1px;
+            right: -1px;
+            height: 8px;
+            border-radius: 6px 6px 0 0;
+            border: 1px solid inherit;
+            background: inherit;
+        }
+
+        .legend-box.available {
+            background: #333;
+            border: 1px solid #555;
+        }
+
+            .legend-box.available .seat-headrest-legend {
+                background: #333;
+                border: 1px solid #555;
+                border-bottom: none;
+            }
+
+        .legend-box.selected {
+            background: var(--gold-main);
+            color: black;
+        }
+
+            .legend-box.selected .seat-headrest-legend {
+                background: var(--gold-main);
+            }
+
+        .legend-box.sold {
+            background: #1a1a1a;
+            border: 1px solid #333;
+        }
+
+            .legend-box.sold .seat-headrest-legend {
+                background: #1a1a1a;
+                border: 1px solid #333;
+                border-bottom: none;
+            }
+
+        .legend-box.twin-legend {
+            background: linear-gradient(90deg, #3e4a5c 42%, #2a3340 42%, #2a3340 58%, #3e4a5c 58%);
+            border: 1px solid #4e5d72;
+        }
+
+            .legend-box.twin-legend .seat-headrest-legend {
+                background: linear-gradient(90deg, #3e4a5c 42%, #2a3340 42%, #2a3340 58%, #3e4a5c 58%);
+                border: 1px solid #4e5d72;
+                border-bottom: none;
+            }
+
+        .legend-box.damaged {
+            background: #2c0b0e;
+            border: 1px solid #5c1e23;
+        }
+
+            .legend-box.damaged .seat-headrest-legend {
+                background: #2c0b0e;
+                border: 1px solid #5c1e23;
+                border-bottom: none;
+            }
+
+    body {
+        padding-bottom: 80px;
+    }
+</style>
+
+<script>
+    function updateSummary() {
+        const checkboxes = document.querySelectorAll('.seat-checkbox:checked');
+        const summaryText = document.getElementById('selectedSeatsText');
+        const priceText = document.getElementById('totalPriceText');
+        const btn = document.getElementById('btnCheckout');
+
+        let total = 0;
+        let labels = [];
+        checkboxes.forEach(cb => {
+            let price = parseFloat(cb.getAttribute('data-price'));
+            let label = cb.getAttribute('data-label');
+            total += price;
+            labels.push(label);
+        });
+
+        if (labels.length > 0) {
+            summaryText.innerText = labels.join(', ');
+            summaryText.style.color = "var(--gold-main)";
+            btn.disabled = false;
+        } else {
+            summaryText.innerText = "-";
+            summaryText.style.color = "#fff";
+            btn.disabled = true;
+        }
+        priceText.innerText = "RM " + total.toFixed(2);
+    }
+
+    // [NEW] 40-SECOND COUNTDOWN TIMER
+    document.addEventListener("DOMContentLoaded", function () {
+        let timeLeft = 40; // Seconds
+        const timerDisplay = document.getElementById("countdownTimer");
+
+        const timerInterval = setInterval(() => {
+            timeLeft--;
+
+            // Format time as 00:xx
+            let seconds = timeLeft < 10 ? "0" + timeLeft : timeLeft;
+            timerDisplay.innerText = "00:" + seconds;
+
+            // Change color to warn user when low
+            if (timeLeft <= 10) {
+                timerDisplay.classList.add("text-warning");
+                timerDisplay.classList.remove("text-danger");
+                // You can add a blinking effect here if you like
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerDisplay.innerText = "00:00";
+
+                // Alert and Redirect
+                alert("Session expired! The seats have been released.");
+                window.location.href = '@Url.Action("Index", "Home")';
+            }
+        }, 1000);
+    });
+</script>

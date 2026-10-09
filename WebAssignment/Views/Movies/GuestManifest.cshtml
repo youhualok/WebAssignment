@@ -1,0 +1,112 @@
+﻿@model List<WebAssignment.Models.Booking>
+@using WebAssignment.Helpers
+
+@{
+    var showtime = ViewBag.Showtime as WebAssignment.Models.Showtime;
+    ViewData["Title"] = "Guest Manifest";
+    int totalSeatsSold = Model.SelectMany(b => b.BookingDetails).Count();
+}
+
+<div class="container mt-4">
+
+    @* --- HEADER --- *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-white mb-0">@showtime.Movie.Title</h2>
+            <div class="d-flex gap-3 text-muted mt-1">
+                <span><i class="bi bi-geo-alt-fill text-warning"></i> @showtime.Hall.Cinema.Name - @showtime.Hall.Name</span>
+                <span><i class="bi bi-clock-fill text-warning"></i> @showtime.StartTime.ToString("dd MMM yyyy, h:mm tt")</span>
+                <span><i class="bi bi-people-fill text-warning"></i> @totalSeatsSold / @showtime.MaxSeats Seats</span>
+            </div>
+        </div>
+        <div>
+            <a asp-action="HallOccupancy" class="btn btn-outline-secondary me-2">Back</a>
+            <a asp-action="ExportManifest" asp-route-showtimeId="@showtime.ShowtimeId" class="btn btn-success">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    @* --- GUEST TABLE --- *@
+    <div class="card bg-dark border-secondary shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                    <thead class="bg-black text-warning">
+                        <tr>
+                            <th class="ps-4">#</th>
+                            <th>Customer (Anonymized)</th> @* Updated Header *@
+                            <th>Seats</th>
+                            <th>Snacks</th>
+                            <th>Total (RM)</th>
+                            <th>Booking ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Any())
+                        {
+                            int rowCount = 1;
+                            foreach (var booking in Model)
+                            {
+                                <tr>
+                                    <td class="ps-4 text-muted">@(rowCount++)</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @* ALWAYS SHOW ANONYMOUS ICON (Logic removed for checking profile photo) *@
+                                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" style="width:32px; height:32px;">
+                                                <i class="bi bi-person-fill text-white"></i>
+                                            </div>
+
+                                            <div>
+                                                @* Masked Name *@
+                                                <div class="fw-bold">
+                                                    @PrivacyHelper.MaskName(booking.User?.FullName ?? "Guest")
+                                                </div>
+                                                @* Masked Email *@
+                                                <div class="small text-muted">
+                                                    @PrivacyHelper.MaskEmail(booking.User?.Email ?? "-")
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @foreach (var detail in booking.BookingDetails)
+                                        {
+                                            <span class="badge bg-warning text-dark me-1">@detail.Seat.Row@detail.Seat.Number</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (booking.BookingSnacks != null && booking.BookingSnacks.Any())
+                                        {
+                                            <ul class="list-unstyled mb-0 small text-white-50">
+                                                @foreach (var snack in booking.BookingSnacks)
+                                                {
+                                                    <li>@snack.Quantity x @snack.Snack.Name</li>
+                                                }
+                                            </ul>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td class="fw-bold text-success">@booking.TotalAmount.ToString("N2")</td>
+                                    <td class="text-muted small">@booking.BookingId</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    No tickets sold yet.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,569 @@
+﻿@using Microsoft.AspNetCore.Http
+@using System.Security.Claims
+@inject WebAssignment.Helpers.LanguageService Lang
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Waliu Cinema</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+
+@{
+    string currentTheme = Context.Request.Cookies["UserTheme"] ?? "Gold";
+}
+
+<body data-theme="@currentTheme">
+
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-dark fixed-top">
+            <div class="container">
+                @if (User.IsInRole("Admin"))
+                {
+                    <a class="navbar-brand" asp-controller="Movies" asp-action="Dashboard">
+                        <i class="bi bi-shield-lock-fill me-2 text-danger"></i>@Lang.Get("Admin Console")
+                    </a>
+                }
+                else
+                {
+                    <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-film me-2"></i>WALIU CINEMA
+                    </a>
+                }
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-warning fw-bold" asp-controller="Movies" asp-action="Dashboard">
+                                    <i class="bi bi-speedometer2 me-1"></i> @Lang.Get("Dashboard")
+                                </a>
+                            </li>
+                            @* === NEW BUTTON ADDED HERE === *@
+                            <li class="nav-item">
+                                <a class="nav-link text-warning fw-bold" asp-controller="Movies" asp-action="HallOccupancy">
+                                    <i class="bi bi-grid-3x3-gap me-1"></i> @Lang.Get("Hall Status")
+                                </a>
+                            </li>
+                            @* =========================== *@
+                            <li class="nav-item">
+                                <a class="nav-link text-warning fw-bold" asp-controller="Showtimes" asp-action="Index">
+                                    <i class="bi bi-calendar-week me-1"></i> @Lang.Get("Manage Schedule")
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Home" asp-action="Index">@Lang.Get("Movies")</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Home" asp-action="Snacks">@Lang.Get("Food & Beverage")</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Home" asp-action="Locations">@Lang.Get("Locations")</a>
+                            </li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav align-items-center">
+                        <li class="nav-item dropdown ms-2 me-3">
+                            <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="dropdown">
+                                <i class="bi bi-globe me-1"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow">
+                                <li>
+                                    <form asp-controller="Home" asp-action="SetLanguage" asp-route-returnUrl="@Context.Request.Path" method="post">
+                                        <input type="hidden" name="culture" value="en" />
+                                        <button type="submit" class="dropdown-item">🇬🇧 English</button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form asp-controller="Home" asp-action="SetLanguage" asp-route-returnUrl="@Context.Request.Path" method="post">
+                                        <input type="hidden" name="culture" value="ms" />
+                                        <button type="submit" class="dropdown-item">🇲🇾 Bahasa Melayu</button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form asp-controller="Home" asp-action="SetLanguage" asp-route-returnUrl="@Context.Request.Path" method="post">
+                                        <input type="hidden" name="culture" value="zh" />
+                                        <button type="submit" class="dropdown-item">🇨🇳 中文</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+
+                        @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        {
+                            @if (!User.IsInRole("Admin"))
+                            {
+                                <li class="nav-item me-4">
+                                    <a class="nav-link nav-link-special fw-bold" asp-controller="Booking" asp-action="MyBookings">
+                                        <i class="bi bi-ticket-perforated-fill me-2"></i>@Lang.Get("My Bookings")
+                                    </a>
+                                </li>
+                                <li class="nav-item me-3">
+                                    <a class="nav-link text-warning fw-bold" asp-controller="Home" asp-action="MyWatchlist">
+                                        <i class="bi bi-heart-fill me-2"></i>@Lang.Get("Watch List")
+                                    </a>
+                                </li>
+                            }
+
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                    @{
+                                        var profilePic = User.FindFirst("ProfilePic")?.Value;
+                                        if (string.IsNullOrEmpty(profilePic))
+                                        {
+                                            profilePic = $"https://ui-avatars.com/api/?name={User.Identity.Name}&background=random";
+                                        }
+                                    }
+                                    <img src="@profilePic" class="rounded-circle border border-warning" style="width: 32px; height: 32px; object-fit: cover;" alt="Profile" />
+                                    <span class="text-white fw-bold">@User.Identity.Name</span>
+                                </a>
+
+                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" aria-labelledby="userDropdown">
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <li><h6 class="dropdown-header text-danger text-uppercase small">System Admin</h6></li>
+                                        <li><a class="dropdown-item text-warning" asp-controller="Movies" asp-action="Dashboard">@Lang.Get("Dashboard")</a></li>
+                                        <li><a class="dropdown-item text-warning" asp-controller="Showtimes" asp-action="Index">@Lang.Get("Manage Schedule")</a></li>
+
+                                        <li><hr class="dropdown-divider bg-secondary"></li>
+
+                                        <li><h6 class="dropdown-header text-muted text-uppercase small">Admin Tools</h6></li>
+
+                                        @if (!User.HasClaim(c => c.Type == "ManagedCinemaId"))
+                                        {
+                                            <li><a class="dropdown-item" asp-controller="Snacks" asp-action="Index"><i class="bi bi-cup-straw me-2"></i> @Lang.Get("Manage Snacks")</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Movies" asp-action="Index"><i class="bi bi-film me-2"></i> @Lang.Get("Manage Movies")</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Reviews" asp-action="Index"><i class="bi bi-chat-quote-fill me-2"></i> @Lang.Get("Manage Reviews")</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Staff" asp-action="Index"><i class="bi bi-people-fill me-2"></i> @Lang.Get("Manage Staff")</a></li>
+                                        }
+
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Seats" asp-action="Index">
+                                                <i class="bi bi-grid-3x3-gap-fill me-2"></i> @Lang.Get("Manage Seats")
+                                            </a>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li><h6 class="dropdown-header text-muted text-uppercase small">Account</h6></li>
+                                        <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">@Lang.Get("View Profile")</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Account" asp-action="Redeem">@Lang.Get("Redeem Rewards")</a></li>
+                                    }
+                                    <li><hr class="dropdown-divider bg-secondary"></li>
+                                    <li>
+                                        <form id="logoutForm"
+                                              asp-controller="Account"
+                                              asp-action="Logout"
+                                              method="post"
+                                              class="m-0">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <button type="button"
+                                                    class="dropdown-item text-danger"
+                                                    onclick="confirmLogout()">
+                                                <i class="bi bi-box-arrow-right me-2"></i>
+                                                @Lang.Get("Logout")
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Account" asp-action="Login">@Lang.Get("Login")</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="btn btn-warning fw-bold ms-3 px-4 rounded-pill" asp-controller="Account" asp-action="Register">@Lang.Get("Join Now")</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    @await RenderSectionAsync("Hero", required: false)
+
+    <div class="container" style="margin-top: 100px;">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    @* --- CHAT SECTION: authenticated users only --- *@
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div id="chat-container">
+            <button id="chat-toggle-btn" class="shadow-lg">
+                <i class="bi bi-chat-dots-fill"></i> @Lang.Get("Live Chat")
+            </button>
+
+            <div id="chat-box" class="card shadow-lg d-none">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center border-bottom border-secondary">
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold" style="color: var(--gold-main); font-size: 0.9rem;">
+                            <i class="bi bi-person-circle me-1"></i>
+                            @User.Identity.Name
+                        </span>
+                        <span id="chat-live-clock" class="small text-muted" style="font-size: 0.7rem;">Connecting...</span>
+                    </div>
+                    <button id="chat-close-btn" class="btn btn-sm text-white"><i class="bi bi-x-lg"></i></button>
+                </div>
+
+                <div class="card-body p-0" style="background: #111;">
+                    <ul id="messagesList" class="list-unstyled p-3" style="height: 320px; overflow-y: auto;">
+                        <li class="text-muted small text-center mb-3">
+                            <span class="badge bg-secondary">Today</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-footer bg-dark border-top border-secondary p-2">
+                    <div class="input-group">
+                        <input type="text" id="messageInput" class="form-control form-control-sm bg-black text-white border-secondary" placeholder="Type a message..." autocomplete="off">
+                        <button id="sendButton" class="btn btn-sm btn-warning fw-bold"><i class="bi bi-send-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <style>
+            #chat-container {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 9999;
+                font-family: 'Roboto', sans-serif;
+            }
+
+            #chat-toggle-btn {
+                background: var(--gold-gradient);
+                color: #000;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 50px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: transform 0.2s;
+            }
+
+                #chat-toggle-btn:hover {
+                    transform: scale(1.05);
+                }
+
+            #chat-box {
+                width: 340px;
+                position: absolute;
+                bottom: 60px;
+                right: 0;
+                border: 1px solid #333;
+                border-radius: 12px;
+                overflow: hidden;
+            }
+
+            .chat-bubble {
+                max-width: 80%;
+                padding: 8px 12px;
+                border-radius: 12px;
+                position: relative;
+                font-size: 0.9rem;
+                margin-bottom: 4px;
+                word-wrap: break-word;
+            }
+
+            .chat-mine {
+                background-color: var(--gold-dark);
+                color: #fff;
+                border-bottom-right-radius: 2px;
+                margin-left: auto;
+            }
+
+            .chat-other {
+                background-color: #2a2a2a;
+                color: #ddd;
+                border-bottom-left-radius: 2px;
+                margin-right: auto;
+            }
+
+            .chat-meta {
+                font-size: 0.65rem;
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+                opacity: 0.8;
+                margin-top: 4px;
+                gap: 5px;
+            }
+
+            .chat-name {
+                font-weight: bold;
+                font-size: 0.7rem;
+                margin-bottom: 2px;
+                color: var(--gold-bright);
+            }
+    </style>
+
+    <footer>
+        <div class="container">
+            <span class="text-muted">
+                &copy; 2024 - <span class="gold-title" style="font-size: 1rem;">Waliu Cinema</span> - Experience the Magic
+            </span>
+        </div>
+    </footer>
+
+    <script src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+            function confirmLogout() {
+                const logoutForm = document.getElementById("logoutForm");
+
+                if (!logoutForm) {
+                    alert("Logout form was not found.");
+                    return;
+                }
+
+                if (typeof Swal === "undefined") {
+                    if (confirm("Are you sure you want to log out?")) {
+                        logoutForm.submit();
+                    }
+
+                    return;
+                }
+
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You will be logged out.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#c9a86a",
+                    cancelButtonColor: "#444444",
+                    background: "#1a1714",
+                    color: "#f5ead7",
+                    confirmButtonText: "Yes, log out",
+                    cancelButtonText: "Cancel"
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        logoutForm.submit();
+                    }
+                });
+            }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script>
+                // CHAT LOGIC - the status changes to Online only after SignalR connects.
+                const currentChatUser = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(User.Identity.Name ?? "User"));
+                var connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/chatHub")
+                    .withAutomaticReconnect()
+                    .build();
+                var sendBtn = document.getElementById("sendButton");
+                var msgInput = document.getElementById("messageInput");
+                var chatBox = document.getElementById("chat-box");
+                var clockEl = document.getElementById("chat-live-clock");
+
+                function showChatStatus(text, color, enabled) {
+                    if (clockEl) {
+                        clockEl.textContent = "● " + text;
+                        clockEl.style.color = color;
+                    }
+                    if (sendBtn) sendBtn.disabled = !enabled;
+                    if (msgInput) msgInput.disabled = !enabled;
+                }
+
+                showChatStatus("Connecting...", "#aaaaaa", false);
+
+                connection.on("ReceiveMessage", function(user, message, time) {
+                    addMessageToUI(user, message, time);
+                });
+
+                connection.on("LoadHistory", function(history) {
+                    var container = document.getElementById("messagesList");
+                    if (container) {
+                        container.innerHTML = '<li class="text-muted small text-center mb-3"><span class="badge bg-secondary">Recent History</span></li>';
+                        history.forEach(h => addMessageToUI(h.user, h.message, h.time));
+                    }
+                });
+
+                connection.onreconnecting(function() {
+                    showChatStatus("Reconnecting...", "#f0ad4e", false);
+                });
+
+                connection.onreconnected(function() {
+                    showChatStatus("Online", "#4cd137", true);
+                });
+
+                connection.onclose(function() {
+                    showChatStatus("Disconnected", "#ff4b4b", false);
+                });
+
+                connection.start()
+                    .then(function() {
+                        console.log("Chat connected:", connection.connectionId);
+                        showChatStatus("Online", "#4cd137", true);
+                    })
+                    .catch(function(err) {
+                        console.error("Chat connection failed:", err);
+                        showChatStatus("Disconnected", "#ff4b4b", false);
+                    });
+
+                function addMessageToUI(user, message, time) {
+                    var list = document.getElementById("messagesList");
+                    if (!list) return;
+
+                    var isMe = (user === currentChatUser);
+
+                    var li = document.createElement("li");
+                    li.style.display = "flex";
+                    li.style.flexDirection = "column";
+                    li.style.marginBottom = "10px";
+
+                    var bubbleClass = isMe ? "chat-mine" : "chat-other";
+
+                    var displayTime = "";
+                    if (!time) {
+                        displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    } else {
+                        displayTime = time.toString().includes('T')
+                            ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : time;
+                    }
+
+                    var bubble = document.createElement("div");
+                    bubble.className = "chat-bubble " + bubbleClass;
+
+                    if (!isMe) {
+                        var nameElement = document.createElement("div");
+                        nameElement.className = "chat-name";
+                        nameElement.textContent = user;
+                        bubble.appendChild(nameElement);
+                    }
+
+                    var messageElement = document.createElement("span");
+                    messageElement.textContent = message;
+                    bubble.appendChild(messageElement);
+
+                    var meta = document.createElement("div");
+                    meta.className = "chat-meta";
+                    var timeElement = document.createElement("span");
+                    timeElement.textContent = displayTime;
+                    meta.appendChild(timeElement);
+
+                    if (isMe) {
+                        var checkIcon = document.createElement("i");
+                        checkIcon.className = "bi bi-check2-all";
+                        meta.appendChild(checkIcon);
+                    }
+
+                    bubble.appendChild(meta);
+                    li.appendChild(bubble);
+                    list.appendChild(li);
+                    list.scrollTop = list.scrollHeight;
+                }
+
+                if (sendBtn) {
+                    sendBtn.addEventListener("click", async function(event) {
+                        event.preventDefault();
+                        var message = msgInput ? msgInput.value.trim() : "";
+                        if (message === "") return;
+
+                        if (connection.state !== signalR.HubConnectionState.Connected) {
+                            showChatStatus("Disconnected", "#ff4b4b", false);
+                            return;
+                        }
+
+                        try {
+                            // This matches ChatHub.SendMessage(string message).
+                            await connection.invoke("SendMessage", message);
+                            msgInput.value = "";
+                            msgInput.focus();
+                        } catch (err) {
+                            console.error("Message sending failed:", err);
+                        }
+                    });
+                }
+
+                if (msgInput) {
+                    msgInput.addEventListener("keypress", function(event) {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            if (sendBtn && !sendBtn.disabled) sendBtn.click();
+                        }
+                    });
+                }
+
+                var toggleBtn = document.getElementById("chat-toggle-btn");
+                if (toggleBtn) {
+                    toggleBtn.addEventListener("click", function() {
+                        if (chatBox) chatBox.classList.toggle("d-none");
+                    });
+                }
+
+                var closeBtn = document.getElementById("chat-close-btn");
+                if (closeBtn) {
+                    closeBtn.addEventListener("click", function() {
+                        if (chatBox) chatBox.classList.add("d-none");
+                    });
+                }
+        </script>
+    }
+
+    <div id="antiforgery-token" class="d-none">@Html.AntiForgeryToken()</div>
+    <script>
+            if (window.jQuery) {
+                $.ajaxSetup({
+                    headers: { "RequestVerificationToken": document.querySelector('#antiforgery-token input').value }
+                });
+            }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+    <script>
+            const idleDuration = 30 * 60 * 1000;
+            let idleTimer;
+
+            function startIdleTimer() {
+                if (idleTimer) clearTimeout(idleTimer);
+                idleTimer = setTimeout(logoutUser, idleDuration);
+            }
+
+            function logoutUser() {
+                var form = document.createElement("form");
+                form.method = "post";
+                form.action = "/Account/Logout";
+                const token = document.querySelector('#antiforgery-token input').cloneNode();
+                form.appendChild(token);
+                document.body.appendChild(form);
+                form.submit();
+            }
+
+            window.onload = startIdleTimer;
+            document.onmousemove = startIdleTimer;
+            document.onkeypress = startIdleTimer;
+            document.onclick = startIdleTimer;
+            document.onscroll = startIdleTimer;
+    </script>
+</body>
+</html>

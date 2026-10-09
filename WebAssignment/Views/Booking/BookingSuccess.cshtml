@@ -1,0 +1,316 @@
+﻿<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+@model WebAssignment.Models.Booking
+
+@{
+    ViewData["Title"] = "Booking Confirmed";
+
+    // QR Data
+    string qrData = "BOOKID-" + Model.BookingId;
+    string qrUrl = $"https://quickchart.io/qr?text={qrData}&size=200&dark=d4af37&light=000000";
+
+    // Share Text
+    string shareTitle = Model.Showtime != null ? Model.Showtime.Movie.Title : "Waliu Cinema Snacks";
+    string shareText = $"I just booked tickets for {shareTitle} at Waliu Cinema! 🍿🎬";
+    string currentUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/";
+}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+    /* PRINT STYLES */
+    @@media print {
+        .no-print, header, footer, .navbar {
+            display: none !important;
+        }
+
+        body {
+            background-color: white !important;
+            color: black !important;
+        }
+
+        .card {
+            border: 2px solid black !important;
+            box-shadow: none !important;
+            background-color: white !important;
+            color: black !important;
+        }
+
+        .gold-title, .text-warning, .text-success, .text-white {
+            color: black !important;
+            background: none !important;
+            -webkit-text-fill-color: black !important;
+        }
+
+        .badge {
+            border: 1px solid black;
+            color: black !important;
+        }
+    }
+
+    /* RECEIPT STYLES */
+    .receipt-card {
+        background-color: #121212;
+        border: 1px solid var(--gold-dark);
+        color: var(--text-white);
+    }
+
+    .receipt-header {
+        background-color: #080808;
+        border-bottom: 1px solid var(--gold-dark);
+        padding: 20px;
+    }
+
+    .list-group-item {
+        background-color: transparent;
+        border-color: #333;
+        color: var(--text-white);
+    }
+
+    .badge-gold {
+        background-color: var(--gold-main);
+        color: black;
+        font-weight: bold;
+    }
+
+    /* CRITICAL FIX: Forces text to be solid color, removing the gold gradient background box */
+    .solid-text-reset {
+        background: none !important;
+        background-image: none !important;
+        -webkit-background-clip: border-box !important;
+        background-clip: border-box !important;
+        -webkit-text-fill-color: currentColor !important;
+        text-shadow: none !important;
+    }
+
+    /* SHARE BUTTONS */
+    .btn-share {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 5px;
+        transition: 0.3s;
+        border: 1px solid #333;
+        background-color: #000;
+        color: #888;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+        .btn-share:hover {
+            transform: translateY(-3px);
+            color: #000;
+        }
+
+    .btn-share-pdf:hover {
+        background-color: #F40F02;
+        border-color: #F40F02;
+        color: white;
+    }
+
+    .btn-share-fb:hover {
+        background-color: #1877F2;
+        border-color: #1877F2;
+    }
+
+    .btn-share-x:hover {
+        background-color: #fff;
+        border-color: #fff;
+    }
+
+    .btn-share-png:hover {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+</style>
+
+<div class="container mt-5 mb-5">
+
+    <div class="text-center mb-4 no-print">
+        <div class="d-inline-flex align-items-center justify-content-center p-3 rounded mb-3"
+             style="background-color: rgba(212, 175, 55, 0.1); border: 1px solid var(--gold-main);">
+            <i class="bi bi-check-circle-fill me-2" style="font-size: 1.5rem; color: var(--gold-main);"></i>
+            <h4 class="m-0 gold-title" style="margin-bottom: 0 !important;">Booking Successful!</h4>
+        </div>
+        <p class="text-white-50">Your order has been confirmed.</p>
+    </div>
+
+    <div id="receipt-content" class="card shadow-lg mx-auto receipt-card" style="max-width: 600px;">
+
+        <div class="receipt-header text-center">
+            @if (Model.Showtime != null)
+            {
+                <h3 class="mb-1 solid-text-reset" style="color: #ffffff !important; text-transform: uppercase; font-family: 'Playfair Display', serif;">
+                    @Model.Showtime.Movie.Title
+                </h3>
+                <span class="badge badge-gold">CINEMA TICKET</span>
+            }
+            else
+            {
+                <h3 class="mb-1 solid-text-reset" style="color: #ffffff !important;">
+                    Food & Beverage
+                </h3>
+                <span class="badge badge-gold">SNACK ORDER</span>
+            }
+            <div class="mt-2 text-white-50 small">Booking ID: #@Model.BookingId</div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <div class="p-2 d-inline-block rounded" style="border: 1px solid #333; background: #000;">
+                    <img src="@qrUrl" crossorigin="anonymous" alt="Order QR Code" class="img-fluid" style="width: 150px; height: 150px;">
+                </div>
+                <p class="text-muted small mt-2"><i class="bi bi-qr-code-scan"></i> Scan for verification</p>
+            </div>
+
+            @if (Model.Showtime != null)
+            {
+                <div class="row mb-2"><div class="col-5 text-muted">Cinema:</div><div class="col-7 fw-bold text-white">@Model.Showtime.Hall.Cinema.Name</div></div>
+                <div class="row mb-2"><div class="col-5 text-muted">Hall:</div><div class="col-7 fw-bold text-white">@Model.Showtime.Hall.Name</div></div>
+                <div class="row mb-2"><div class="col-5 text-muted">Date:</div><div class="col-7 fw-bold text-warning">@Model.Showtime.StartTime.ToString("f")</div></div>
+                <div class="row mb-2">
+                    <div class="col-5 text-muted">Seats:</div>
+                    <div class="col-7 fw-bold">
+                        @foreach (var detail in Model.BookingDetails)
+                        {
+                            <span class="badge bg-dark border border-secondary me-1 text-warning">@detail.Seat.Row@detail.Seat.Number</span>
+                        }
+                    </div>
+                </div>
+                <hr style="border-color: #333;" />
+            }
+            else
+            {
+                <div class="text-center mb-3"><p class="small text-white-50 mt-1">Order Date: @Model.BookingDate.ToString("f")</p></div>
+                <hr style="border-color: #333;" />
+            }
+
+            @if (Model.BookingSnacks != null && Model.BookingSnacks.Any())
+            {
+                <div class="mb-3">
+                    <h6 class="fw-bold text-warning"><i class="bi bi-cup-straw"></i> Snacks</h6>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var snackItem in Model.BookingSnacks)
+                        {
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span>@snackItem.Quantity x @snackItem.Snack.Name</span>
+                                <span class="text-white">RM @((snackItem.Quantity * snackItem.Snack.Price).ToString("N2"))</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <hr style="border-color: #333;" />
+            }
+
+            <div class="row align-items-center mt-3">
+                <div class="col-6">
+                    <h5 class="m-0 solid-text-reset" id="totalPaidLabel" style="color: #d4af37 !important; background: transparent !important; font-weight: bold;">
+                        Total Paid:
+                    </h5>
+                </div>
+                <div class="col-6 text-end">
+                    <h3 class="m-0 solid-text-reset" style="color: #d4af37 !important; font-weight: 700;">
+                        RM @Model.TotalAmount.ToString("N2")
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer text-center no-print no-screenshot border-top-0 pb-4" style="background-color: #121212;">
+
+            <p class="small text-muted mb-2">Share Receipt</p>
+            <div class="mb-4">
+                <button onclick="sharePdfToWhatsApp()" class="btn-share btn-share-pdf" title="Download PDF Receipt">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                </button>
+                <button onclick="shareReceiptImage()" class="btn-share btn-share-png" title="Download PNG Receipt">
+                    <i class="bi bi-file-earmark-image-fill"></i>
+                </button>
+            </div>
+
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Home</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function shareReceiptImage() {
+        var element = document.getElementById("receipt-content");
+
+        html2canvas(element, {
+            useCORS: true,
+            backgroundColor: "#121212",
+            ignoreElements: (node) => {
+                return node.classList && node.classList.contains('no-screenshot');
+            }
+        }).then(canvas => {
+            canvas.toBlob(function(blob) {
+                var file = new File([blob], "Waliu-Receipt.png", { type: "image/png" });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file], title: 'Waliu Cinema Receipt', text: 'Here is my receipt!' });
+                } else {
+                    var link = document.createElement('a');
+                    link.download = 'Waliu-Receipt.png';
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    alert("Receipt Image downloaded!");
+                }
+            });
+        });
+    }
+    async function sharePdfToWhatsApp() {
+        const { jsPDF } = window.jspdf;
+        const element = document.getElementById("receipt-content");
+
+        // 1. Capture the Receipt as an Image first
+        const canvas = await html2canvas(element, {
+            scale: 2, // Higher quality
+            useCORS: true,
+            backgroundColor: "#121212", // Match your card background
+            ignoreElements: (node) => {
+                return node.classList && node.classList.contains('no-screenshot');
+            }
+        });
+
+        // 2. Convert Image to PDF
+        const imgData = canvas.toDataURL('image/png');
+
+        // Calculate dimensions to fit A4 width
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        const pdfBlob = pdf.output('blob');
+
+        // 3. Share the File
+        const file = new File([pdfBlob], "Waliu-Booking.pdf", { type: "application/pdf" });
+
+        // Check if browser supports file sharing (Works on most Mobiles)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'Waliu Cinema Receipt',
+                    text: 'Here is my booking receipt for Waliu Cinema! 🍿'
+                });
+            } catch (err) {
+                console.log("Share cancelled or failed", err);
+            }
+        } else {
+            // Fallback for Desktop (Downloads the PDF instead)
+            pdf.save("Waliu-Booking.pdf");
+            alert("PDF Downloaded! Please drag the file into WhatsApp to send it.");
+        }
+    }
+</script>

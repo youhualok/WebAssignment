@@ -1,0 +1,50 @@
+﻿@model WebAssignment.Models.User
+
+@{
+    ViewData["Title"] = "Create Admin";
+}
+
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card p-5 shadow-lg" style="border: 1px solid var(--gold-dark); background-color: #121212;">
+        <h3 class="gold-title mb-4 text-center">Register New Admin</h3>
+
+        <form asp-action="CreateAdmin">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label class="text-warning">Username</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white"><i class="bi bi-person"></i></span>
+                    <input asp-for="Username" class="form-control bg-dark text-white border-secondary" placeholder="Enter username" required />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="text-warning">Full Name</label>
+                <input asp-for="FullName" class="form-control bg-dark text-white border-secondary" placeholder="Enter full name" />
+            </div>
+
+            <div class="mb-3">
+                <label class="text-warning">Email Address</label>
+                <input asp-for="Email" type="email" class="form-control bg-dark text-white border-secondary" placeholder="admin@example.com" required />
+            </div>
+
+            <div class="mb-4">
+                <label class="text-warning">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white"><i class="bi bi-key"></i></span>
+                    <input asp-for="Password" type="password" class="form-control bg-dark text-white border-secondary" placeholder="Create password" required />
+                </div>
+            </div>
+
+            <div class="alert alert-dark border-warning text-warning small">
+                <i class="bi bi-info-circle-fill me-2"></i> This user will have full access to manage Movies and Users.
+            </div>
+
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary fw-bold py-2">Create Admin Account</button>
+                <a asp-action="Index" class="btn btn-outline-light">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,70 @@
+﻿@using X.PagedList
+@model IPagedList<WebAssignment.Models.Showtime>
+
+@{
+    ViewData["Title"] = "Manage Schedule";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-warning"><i class="bi bi-calendar-week-fill"></i> @ViewBag.Title</h2>
+        <a asp-action="Create" class="btn btn-warning fw-bold">
+            <i class="bi bi-plus-circle me-1"></i> Add Showtime
+        </a>
+    </div>
+
+    @* === AJAX SEARCH & FILTER FORM === *@
+    <div class="card bg-dark border-secondary mb-4 p-3">
+        <form asp-action="Index" method="get"
+              data-ajax="true"
+              data-ajax-method="get"
+              data-ajax-update="#showtimesTableContainer"
+              class="row g-3 align-items-end">
+
+            @* 1. Search Box *@
+            <div class="col-md-4">
+                <label class="text-white small mb-1">Search Movie</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-secondary border-secondary text-white"><i class="bi bi-search"></i></span>
+                    <input type="text" name="searchString" value="@ViewData["CurrentFilter"]"
+                           class="form-control bg-black text-white border-secondary"
+                           placeholder="Movie Title..." />
+                </div>
+            </div>
+
+            @* 2. Branch Filter (Auto-Submits on Change) *@
+            <div class="col-md-3">
+                <label class="text-white small mb-1">Filter Branch</label>
+                @if (ViewBag.IsBranchAdmin != null && (bool)ViewBag.IsBranchAdmin)
+                {
+                    <input type="text" class="form-control bg-dark text-muted border-secondary" value="Your Branch" disabled />
+                }
+                else
+                {
+                    @* ADDED: onchange to trigger immediate update *@
+                    <select name="branchId"
+                            class="form-select bg-black text-white border-secondary"
+                            asp-items="ViewBag.BranchList"
+                            onchange="this.form.submit()"></select>
+                }
+            </div>
+
+            @* 3. Actions *@
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-50">Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary w-50">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    @* === TABLE CONTAINER (AJAX TARGET) === *@
+    @* We put the ID here so the Partial View replaces the CONTENT inside this div *@
+    <div id="showtimesTableContainer">
+        @await Html.PartialAsync("_ShowtimesTablePartial", Model)
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-ajax-unobtrusive/3.2.6/jquery.unobtrusive-ajax.min.js"></script>
+}

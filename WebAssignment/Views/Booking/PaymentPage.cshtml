@@ -1,0 +1,560 @@
+﻿@using System.Globalization
+@inject WebAssignment.Helpers.LanguageService Lang
+@model dynamic
+
+@{
+    ViewData["Title"] = Lang.Get("Payment");
+
+    var showtime = ViewBag.Showtime as WebAssignment.Models.Showtime;
+    var selectedSeatIds = ViewBag.SelectedSeatIds as List<int>;
+    var seatDetails = ViewBag.SelectedSeats as List<WebAssignment.Models.Seat>;
+
+    var cartItems = ViewBag.CartItems as List<WebAssignment.Controllers.SnackCartItem>;
+    var displaySnacks = ViewBag.DisplaySnacks as List<dynamic>;
+
+    decimal subTotal = (ViewBag.SubTotal as decimal?) ?? 0;
+    decimal processingFee = (ViewBag.ProcessingFee as decimal?) ?? 0;
+    decimal grandTotal = (ViewBag.GrandTotal as decimal?) ?? 0;
+
+    decimal snackTotal = (ViewBag.SnackTotal as decimal?) ?? 0;
+    decimal ticketTotal = (ViewBag.TicketTotal as decimal?) ?? (subTotal - snackTotal);
+
+    bool canStack = ViewBag.CanStack ?? false;
+}
+
+<style>
+    .nav-pills .nav-link {
+        color: #aaa;
+        border: 1px solid #333;
+        margin-right: 5px;
+        background-color: #1a1a1a;
+        transition: all 0.3s ease;
+    }
+
+        .nav-pills .nav-link.active {
+            background-color: #d4af37 !important; /* Gold */
+            color: #000 !important;
+            border-color: #d4af37;
+            font-weight: bold;
+        }
+
+    .bank-radio:checked + .bank-card {
+        border-color: #d4af37 !important;
+        background-color: rgba(212, 175, 55, 0.15);
+        box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+    }
+
+    .bank-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        background-color: #1a1a1a;
+        border: 1px solid #444;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+        .bank-card:hover {
+            border-color: #888;
+            background-color: #252525;
+        }
+
+    .bank-logo-wrapper {
+        width: 50px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        background-color: white;
+        border-radius: 4px;
+        padding: 2px;
+    }
+
+    .bank-logo {
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
+    }
+
+    .bank-name {
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-align: left;
+        line-height: 1.2;
+    }
+</style>
+
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-md-7">
+            <h3 class="gold-title mb-4">@Lang.Get("Checkout & Payment")</h3>
+
+            <form asp-action="ConfirmBooking" method="post" id="paymentForm" onsubmit="return validatePayment(event)">
+
+                <input type="hidden" name="showtimeId" value="@(showtime?.ShowtimeId ?? 0)" />
+                <input type="hidden" name="promoCodeInput" id="appliedPromoCode" />
+                <input type="hidden" name="paymentType" id="selected-payment-type" value="Card" />
+
+                @if (selectedSeatIds != null)
+                {
+                    foreach (var id in selectedSeatIds)
+                    {
+                        <input type="hidden" name="selectedSeatIds" value="@id" />
+                    }
+                }
+
+                @if (cartItems != null)
+                {
+                    for (int i = 0; i < cartItems.Count; i++)
+                    {
+                        <input type="hidden" name="cartItems[@i].SnackId" value="@cartItems[i].SnackId" />
+                        <input type="hidden" name="cartItems[@i].Quantity" value="@cartItems[i].Quantity" />
+                        <input type="hidden" name="cartItems[@i].Customization" value="@cartItems[i].Customization" />
+                    }
+                }
+
+                <div class="card p-4 mb-3 shadow-sm" style="background-color: #121212; border: 1px solid var(--gold-dark);">
+
+                    <h5 class="gold-title mb-3"><i class="bi bi-tag-fill me-2"></i>@Lang.Get("Promo Code")</h5>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        @if (canStack)
+                        {
+                            <div class="alert alert-warning border-warning d-flex align-items-center mb-3" role="alert">
+                                <i class="bi bi-stars fs-3 me-3 text-warning"></i>
+                                <div>
+                                    <strong>@Lang.Get("Stacking Unlocked!")</strong><br />
+                                    <span class="small">@Lang.Get("RM200+ & Mixed Items! You can use WALIU10 and a Voucher together.")</span>
+                                </div>
+                            </div>
+                        }
+
+                        <div id="activeCodesArea" class="mb-2" style="display:none;">
+                            <span class="text-muted small me-2">@Lang.Get("Applied"):</span>
+                        </div>
+
+                        <div class="input-group mb-2">
+                            <input type="text" id="promoInput" class="form-control bg-dark text-white border-secondary" placeholder="@Lang.Get("Enter Code")">
+                            <button class="btn btn-outline-warning" type="button" onclick="applyPromo()">@Lang.Get("Apply")</button>
+                        </div>
+                        <div id="promoMessage" class="small fw-bold mb-3"></div>
+
+                        @if (ViewBag.SuggestedPromos != null)
+                        {
+                            var suggestions = ViewBag.SuggestedPromos as List<dynamic>;
+                            if (suggestions != null && suggestions.Count > 0)
+                            {
+                                <div class="mt-3">
+                                    <small class="text-white-50 text-uppercase fw-bold" style="font-size: 0.75rem;">
+                                        <i class="bi bi-stars text-warning"></i> @Lang.Get("Best Vouchers For You")
+                                    </small>
+
+                                    <div class="list-group mt-2">
+                                        @foreach (var promo in suggestions)
+                                        {
+                                            <button type="button"
+                                                    class="list-group-item list-group-item-action bg-dark text-white border-secondary d-flex justify-content-between align-items-center"
+                                                    onclick="useSuggestion('@promo.Code')">
+                                                <div>
+                                                    <strong class="text-warning">@promo.Code</strong>
+                                                    @if (promo.IsStackable == true)
+                                                    {
+                                                        <span class="badge bg-info text-dark ms-2" style="font-size:0.6rem;">@Lang.Get("STACKABLE")</span>
+                                                    }
+                                                    <span class="d-block small text-muted">@promo.Desc</span>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge bg-success mb-1">@Lang.Get("Save") RM @promo.Amount.ToString("N2")</span>
+                                                    <div class="small text-primary fw-bold">@Lang.Get("Apply") <i class="bi bi-arrow-right"></i></div>
+                                                </div>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <div class="p-3 mb-4 rounded d-flex align-items-center" style="background-color: #1a1a1a; border: 1px solid var(--gold-dark);">
+                            <i class="bi bi-info-circle-fill me-3" style="color: var(--gold-main); font-size: 1.2rem;"></i>
+                            <span style="color: var(--text-white);">
+                                <a asp-controller="Account" asp-action="Login" class="fw-bold text-decoration-underline" style="color: var(--gold-main);">@Lang.Get("Login")</a>
+                                @Lang.Get("to use Promo Codes and earn Points!")
+                            </span>
+                        </div>
+                    }
+                    <hr class="border-secondary mb-4 mt-4">
+
+                    <h5 class="gold-title mb-3">@Lang.Get("Payment Method")</h5>
+
+                    <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-card-tab" data-bs-toggle="pill" data-bs-target="#pills-card" type="button" role="tab">
+                                <i class="bi bi-credit-card-2-front me-2"></i>@Lang.Get("Card")
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-tng-tab" data-bs-toggle="pill" data-bs-target="#pills-tng" type="button" role="tab">
+                                <span class="fw-bold" style="color:#005EB8;">TNG</span> <span class="small">@Lang.Get("eWallet")</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-fpx-tab" data-bs-toggle="pill" data-bs-target="#pills-fpx" type="button" role="tab">
+                                <i class="bi bi-bank me-2"></i>@Lang.Get("Online Banking")
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="pills-tabContent">
+
+                        <div class="tab-pane fade show active" id="pills-card" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="text-muted">@Lang.Get("Card Number")</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-credit-card"></i></span>
+                                    <input type="text" id="card-number" name="cardNumber" class="form-control bg-dark text-white border-secondary"
+                                           placeholder="1234 5678 1234 5678" maxlength="19" autocomplete="off" />
+                                </div>
+                                <span id="card-number-error" class="text-danger small"></span>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">@Lang.Get("Expiry")</label>
+                                    <input type="text" id="card-expiry" name="cardExpiry" class="form-control bg-dark text-white border-secondary"
+                                           placeholder="MM/YY" maxlength="5" autocomplete="off" />
+                                    <span id="card-expiry-error" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">CVV</label>
+                                    <input type="text" id="card-cvv" name="cardCvv" class="form-control bg-dark text-white border-secondary"
+                                           placeholder="123" maxlength="4" autocomplete="off" />
+                                    <span id="card-cvv-error" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="pills-tng" role="tabpanel">
+                            <div class="text-center py-4 border border-secondary rounded bg-dark" style="background-color: #0f2b5c !important;">
+                                <h5 class="text-white mb-3 fw-bold">@Lang.Get("Scan to Pay")</h5>
+
+                                <div class="bg-white p-2 d-inline-block rounded mb-3 shadow">
+                                    <a href="https://www.touchngo.com.my/" target="_blank">
+                                        <img src="~/images/tng-qr-placeholder.png" alt="TNG QR Code"
+                                             class="img-fluid" style="width: 180px; height: 180px;"
+                                             onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg'">
+                                    </a>
+                                </div>
+
+                                <p class="text-white-50 small mb-0">@Lang.Get("Total to pay"): <strong class="text-white">RM @grandTotal.ToString("N2")</strong></p>
+                                <p class="text-white-50 small">@Lang.Get("Click QR Code to open TNG website.")</p>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="pills-fpx" role="tabpanel">
+                            <label class="text-muted mb-3 d-block small text-uppercase fw-bold">@Lang.Get("Select Your Bank"):</label>
+
+                            <div class="row g-2">
+                                <input type="hidden" name="selectedBank" id="selected-bank" value="maybank" />
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check bank-radio" name="bankSelection" id="bank_maybank" autocomplete="off" checked onclick="document.getElementById('selected-bank').value='Maybank'">
+                                    <label class="btn btn-outline-secondary w-100 bank-card" for="bank_maybank">
+                                        <div class="bank-logo-wrapper"><img src="~/images/maybank-seeklogo.png" class="bank-logo" alt="Maybank"></div>
+                                        <span class="bank-name">Maybank<br>2u</span>
+                                    </label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check bank-radio" name="bankSelection" id="bank_cimb" autocomplete="off" onclick="document.getElementById('selected-bank').value='CIMB'">
+                                    <label class="btn btn-outline-secondary w-100 bank-card" for="bank_cimb">
+                                        <div class="bank-logo-wrapper"><img src="~/images/CIMB Icon Logo Vector.svg .png" class="bank-logo" alt="CIMB"></div>
+                                        <span class="bank-name">CIMB<br>Clicks</span>
+                                    </label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check bank-radio" name="bankSelection" id="bank_pbb" autocomplete="off" onclick="document.getElementById('selected-bank').value='Public Bank'">
+                                    <label class="btn btn-outline-secondary w-100 bank-card" for="bank_pbb">
+                                        <div class="bank-logo-wrapper"><img src="~/images/public bank Logo Vector.svg .png" class="bank-logo" alt="Public Bank"></div>
+                                        <span class="bank-name">Public<br>Bank</span>
+                                    </label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check bank-radio" name="bankSelection" id="bank_rhb" autocomplete="off" onclick="document.getElementById('selected-bank').value='RHB'">
+                                    <label class="btn btn-outline-secondary w-100 bank-card" for="bank_rhb">
+                                        <div class="bank-logo-wrapper"><img src="~/images/RHB Bank.png" class="bank-logo" alt="RHB"></div>
+                                        <span class="bank-name">RHB<br>Now</span>
+                                    </label>
+                                </div>
+                                <div class="col-12">
+                                    <input type="radio" class="btn-check bank-radio" name="bankSelection" id="bank_hlb" autocomplete="off" onclick="document.getElementById('selected-bank').value='Hong Leong Bank'">
+                                    <label class="btn btn-outline-secondary w-100 bank-card" for="bank_hlb">
+                                        <div class="bank-logo-wrapper"><i class="bi bi-bank text-dark fs-4"></i></div>
+                                        <span class="bank-name">Hong Leong<br>Connect</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 mt-4 shadow-lg fw-bold text-dark">
+                        @Lang.Get("PAY") <span id="btnTotalText">RM @grandTotal.ToString("N2")</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card p-4 sticky-top shadow-lg" style="top: 20px; background-color: #121212; border: 1px solid var(--gold-dark);">
+                <h4 class="gold-title mb-3">@Lang.Get("Order Summary")</h4>
+
+                @if (showtime != null)
+                {
+                    <div class="d-flex mb-3">
+                        <img src="@showtime.Movie?.ImageUrl" class="rounded shadow-sm" style="width: 80px; height: 120px; object-fit: cover;">
+                        <div class="ms-3">
+                            <h5 class="text-white mb-1">@showtime.Movie?.Title</h5>
+                            <p class="small text-muted mb-0">@showtime.Hall?.Cinema?.Name</p>
+                            <p class="small text-muted">@showtime.StartTime.ToString("ddd, dd MMM HH:mm")</p>
+                        </div>
+                    </div>
+                }
+                <hr style="border-color: #333;" />
+
+                @if (selectedSeatIds != null && selectedSeatIds.Any())
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-white fw-bold">@Lang.Get("Tickets") (@selectedSeatIds.Count)</span>
+                        <span class="text-white">RM @ticketTotal.ToString("N2")</span>
+                    </div>
+                    @if (seatDetails != null && seatDetails.Any())
+                    {
+                        <div class="mb-3 ps-2 border-start border-warning border-3">
+                            <small class="text-muted d-block">@Lang.Get("Seats Selected"):</small>
+                            <span class="text-warning small" style="word-wrap: break-word;">
+                                @string.Join(", ", seatDetails.Select(s => s.Row + s.Number))
+                            </span>
+                        </div>
+                    }
+                }
+
+                @if (displaySnacks != null && displaySnacks.Count > 0)
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-2 mt-3">
+                        <span class="text-warning fw-bold">@Lang.Get("Food & Beverage")</span>
+                        <span class="text-warning fw-bold">RM @snackTotal.ToString("N2")</span>
+                    </div>
+                    <ul class="list-unstyled mb-3 ps-2 border-start border-secondary border-3">
+                        @foreach (var item in displaySnacks)
+                        {
+                            <li class="d-flex justify-content-between small text-white-50 mb-2">
+                                <div>
+                                    <span class="text-white fw-bold">@item.Snack.Name</span>
+                                    <span class="text-white ms-1">x @item.Quantity</span>
+                                    @if (!string.IsNullOrEmpty(item.Customization))
+                                    {
+                                        <div class="text-muted" style="font-size: 0.8em; margin-top: -2px;">
+                                            <i class="bi bi-gear-fill me-1" style="font-size: 0.7em;"></i>@Lang.Get(item.Customization)
+                                        </div>
+                                    }
+                                </div>
+                                <span class="align-self-start">RM @item.LineTotal.ToString("N2")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <div class="d-flex justify-content-between mb-2 mt-3 pt-2 border-top" style="border-color: #333 !important;">
+                    <span class="text-white fw-bold">@Lang.Get("Subtotal")</span>
+                    <span class="text-white fw-bold">RM @subTotal.ToString("N2")</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small">@Lang.Get("Processing Fee") (@(selectedSeatIds?.Count ?? 0) x RM 0.50)</span>
+                    <span class="text-muted small">RM @processingFee.ToString("N2")</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2 text-success" id="discountRow" style="display:none;">
+                    <span>@Lang.Get("Discount")</span><span id="discountValue">- RM 0.00</span>
+                </div>
+
+                <hr style="border-color: #333;" />
+
+                <div class="d-flex justify-content-between mt-3 pt-3 border-top border-secondary">
+                    <h4 class="gold-title">@Lang.Get("TOTAL")</h4>
+                    <h4 class="gold-title" id="grandTotalDisplay">RM @grandTotal.ToString("N2")</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let originalGrandTotal = @grandTotal;
+    let snackTotal = @snackTotal;
+
+    // --- 1. CREDIT CARD VALIDATION FUNCTION ---
+    function validateCreditCard() {
+        let valid = true;
+        document.querySelectorAll('.text-danger.small').forEach(e => e.innerText = '');
+        const cardNumber = document.getElementById('card-number').value.replace(/\s/g, '');
+        const expiry = document.getElementById('card-expiry').value;
+        const cvv = document.getElementById('card-cvv').value;
+
+        // A. Card Number Validation (16 digits)
+        if (!/^\d{16}$/.test(cardNumber)) {
+            document.getElementById('card-number-error').innerText = '@Lang.Get("Card number must be 16 digits.")';
+            valid = false;
+        }
+
+        // B. CVV Validation (3 or 4 digits)
+        if (!/^\d{3,4}$/.test(cvv)) {
+            document.getElementById('card-cvv-error').innerText = '@Lang.Get("CVV must be 3 or 4 digits.")';
+            valid = false;
+        }
+
+        // C. Expiry Date Validation (MM/YY format and not expired)
+        const expiryRegex = /^(\d{2})\/(\d{2})$/;
+        const match = expiry.match(expiryRegex);
+
+        if (!match) {
+            document.getElementById('card-expiry-error').innerText = '@Lang.Get("Format must be MM/YY.")';
+            valid = false;
+        } else {
+            const currentYear = new Date().getFullYear() % 100;
+            const currentMonth = new Date().getMonth() + 1;
+            const cardMonth = parseInt(match[1], 10);
+            const cardYear = parseInt(match[2], 10);
+
+            if (cardMonth < 1 || cardMonth > 12) {
+                document.getElementById('card-expiry-error').innerText = '@Lang.Get("Invalid month.")';
+                valid = false;
+            } else if (cardYear < currentYear || (cardYear === currentYear && cardMonth < currentMonth)) {
+                document.getElementById('card-expiry-error').innerText = '@Lang.Get("Card has expired.")';
+                valid = false;
+            }
+        }
+
+        return valid;
+    }
+
+
+    // --- 2. MAIN FORM SUBMISSION HANDLER ---
+    function validatePayment(event) {
+        const activeTab = document.querySelector('.tab-pane.show.active');
+        const paymentMethod = activeTab.id === 'pills-card' ? 'Card' : (activeTab.id === 'pills-tng' ? 'TNG' : 'FPX');
+        document.getElementById('selected-payment-type').value = paymentMethod;
+
+        if (paymentMethod === 'Card') {
+            const isValid = validateCreditCard();
+            if (!isValid) {
+                event.preventDefault();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // --- 3. PROMO CODE LOGIC ---
+    function applyPromo() {
+        var code = document.getElementById("promoInput").value;
+        var currentAppliedCode = document.getElementById("appliedPromoCode").value;
+        var messageBox = document.getElementById("promoMessage");
+
+        if(!code) {
+            messageBox.innerHTML = "@Lang.Get("Please enter a code.")";
+            messageBox.className = "small fw-bold mb-3 text-danger";
+            return;
+        }
+
+        var showtimeIdVal = document.querySelector('input[name="showtimeId"]').value;
+
+        $.post('/Booking/ValidatePromo', {
+            __RequestVerificationToken:
+                document.querySelector(
+                    '#paymentForm input[name="__RequestVerificationToken"]'
+                ).value,
+            code: code,
+            showtimeId: showtimeIdVal,
+            currentAppliedCode: currentAppliedCode,
+            ticketTotal: @(ticketTotal),
+            snackTotal: snackTotal
+        }, function(response) {
+            if(response.success) {
+                messageBox.innerHTML = response.message;
+                messageBox.className = "small fw-bold mb-3 text-success";
+
+                var discount = response.discount;
+                var newTotal = originalGrandTotal - discount;
+
+                document.getElementById("discountRow").style.display = "flex";
+                document.getElementById("discountValue").innerText = "- RM " + discount.toFixed(2);
+                document.getElementById("grandTotalDisplay").innerText = "RM " + newTotal.toFixed(2);
+                document.getElementById("btnTotalText").innerText = "RM " + newTotal.toFixed(2);
+
+                var finalCode = response.combinedCode ? response.combinedCode : code;
+                document.getElementById("appliedPromoCode").value = finalCode;
+
+                updateActiveBadges(finalCode);
+                document.getElementById("promoInput").value = "";
+
+            } else {
+                messageBox.innerHTML = response.message;
+                messageBox.className = "small fw-bold mb-3 text-danger";
+            }
+        });
+    }
+
+    function useSuggestion(code) {
+        document.getElementById("promoInput").value = code;
+        applyPromo();
+    }
+
+    function updateActiveBadges(codeString) {
+        var container = document.getElementById("activeCodesArea");
+        container.style.display = "block";
+        var oldBadges = container.querySelectorAll(".badge");
+        oldBadges.forEach(e => e.remove());
+
+        var codes = codeString.split(',');
+        codes.forEach(c => {
+            var badge = document.createElement("span");
+            badge.className = "badge bg-warning text-dark me-1";
+            badge.innerText = c.trim();
+            container.appendChild(badge);
+        });
+    }
+
+    // --- 4. INPUT FORMATTING ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Auto-format expiry date input
+        const expiryInput = document.getElementById('card-expiry');
+        if (expiryInput) {
+            expiryInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                let formattedValue = '';
+
+                if (value.length > 0) {
+                    formattedValue = value.substring(0, 2);
+                }
+                if (value.length >= 3) {
+                    formattedValue += '/' + value.substring(2, 4);
+                }
+                e.target.value = formattedValue;
+            });
+        }
+
+        // Auto-format card number input
+        const cardInput = document.getElementById('card-number');
+        if (cardInput) {
+            cardInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value; // Add space every 4 digits
+                e.target.value = formattedValue;
+            });
+        }
+    });
+</script>

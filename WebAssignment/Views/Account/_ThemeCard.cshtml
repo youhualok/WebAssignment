@@ -1,0 +1,37 @@
+﻿@model dynamic
+@{
+    // Determine if this card is the currently active theme
+    string borderClass = (Model.ThemeName == Model.Current) ? "border-active" : "border-subtle";
+    // Create the "Active" badge HTML
+    string activeBadge = (Model.ThemeName == Model.Current) ? "<span class='badge bg-success ms-2'>Active</span>" : "";
+}
+
+<div class="card h-100 shadow-sm theme-card @borderClass" style="background: #121212; transition: transform 0.3s;">
+    <div class="card-body text-center p-4">
+        <div class="rounded-circle mx-auto mb-3 shadow-lg"
+             style="width: 80px; height: 80px; background-color: @Model.ColorCode; border: 3px solid #fff;"></div>
+
+        <h5 class="text-white fw-bold">
+            @Model.DisplayName
+            @Html.Raw(activeBadge)
+        </h5>
+
+        <p class="text-muted small mb-4">@Model.Desc</p>
+
+        <form asp-controller="Account"
+              asp-action="ChangeTheme"
+              method="post">
+            @Html.AntiForgeryToken()
+
+            <input type="hidden"
+                   name="selectedColor"
+                   value="@Model.ThemeName" />
+
+            <button type="submit"
+                    class="btn w-100 fw-bold"
+                    style="background-color: @Model.ColorCode; color: #000; border: none;">
+                SELECT THEME
+            </button>
+        </form>
+    </div>
+</div>

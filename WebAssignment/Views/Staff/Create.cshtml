@@ -1,0 +1,63 @@
+﻿@model WebAssignment.Models.User
+@{
+    ViewData["Title"] = "Add New Admin";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card bg-dark border-warning shadow-lg">
+                <div class="card-header bg-black border-bottom border-warning">
+                    <h4 class="gold-title mb-0">Create New Admin</h4>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Create">
+
+                        @if (ViewBag.Error != null)
+                        {
+                            <div class="alert alert-danger d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i> @ViewBag.Error
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">Username</label>
+                            <input asp-for="Username" class="form-control bg-black text-white border-secondary" required placeholder="e.g. admin_pavilion" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">Full Name</label>
+                            <input asp-for="FullName" class="form-control bg-black text-white border-secondary" required placeholder="e.g. Pavilion Manager" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">Email</label>
+                            <input asp-for="Email" type="email" class="form-control bg-black text-white border-secondary" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-warning small text-uppercase fw-bold">Password</label>
+                            <input asp-for="Password" type="password" class="form-control bg-black text-white border-secondary" required />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="text-warning small text-uppercase fw-bold">Assign Branch</label>
+                            <select name="SelectedCinemaId" class="form-select bg-black text-white border-secondary" asp-items="ViewBag.Cinemas">
+                                <option value="">-- No Assignment (Super Admin) --</option>
+                            </select>
+                            <div class="form-text text-muted">
+                                If you select a branch, this admin can <strong>ONLY</strong> manage that specific cinema.
+                                <br>If you leave it empty, they will be a <strong>Super Admin</strong>.
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning fw-bold">Create Account</button>
+                            <a asp-action="Index" class="btn btn-outline-light">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
